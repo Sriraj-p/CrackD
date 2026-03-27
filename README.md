@@ -1,125 +1,109 @@
-# CrackD — AI-Powered Interview Preparation Platform
+# CrackD
 
-> Winner — Google Cloud Agentic AI Hackathon "Boffin's Den" (solo competitor, 40+ teams)
-> 
-> Rebuilt for local development with OpenAI backend, SQLite persistence, and no cloud dependencies.
+**AI-Powered Interview Preparation Platform**
 
-## What It Does
+> Winner — Google Cloud Agentic AI Hackathon "Boffin's Den" (Part 2 — Dragon's Den-style pitch)
+> Solo competitor · 40+ teams · Built by [Sriraj Paruchuru](https://github.com/Sriraj-p)
+> MSc Artificial Intelligence & Machine Learning, University of Birmingham
 
-Upload your CV (PDF) and a job description. CrackD gives you:
+---
 
-1. **Resume Analysis** — Dual HR + ATS perspective with 4 calibrated scores (Overall Fit, Experience Relevance, Resume Quality, Growth Potential)
-2. **Career Chat** — AI career advisor that references your analysis to give targeted advice
-3. **Mock Interview** — AI role-plays as a senior professional for your target role, stays in character, asks probing questions, and gives a hire/no-hire verdict
+## The Problem
+
+Students apply to dozens of roles, get ghosted, and when they finally land an interview — they freeze because they've never practised in a way that feels real. Career services are overbooked. Mock interview tools ask generic questions. Nobody tells you the truth about your CV.
+
+## The Solution
+
+Upload your CV and a job description. CrackD gives you:
+
+- **Resume Analysis** — Dual HR + ATS perspective. Four calibrated scores: Overall Fit, Experience Relevance, Resume Quality, and Growth Potential. Most students score 40–75. You have to be exceptional to break 80.
+- **Career Chat** — An AI career advisor that has read your analysis and gives targeted, actionable advice — not generic platitudes.
+- **Mock Interview** — An AI that role-plays as a senior professional for your target role. It introduces itself with a name and title, stays in character, asks one question at a time, pushes back on vague answers, and at the end gives you a verdict: *"Would I hire you for this role?"*
+
+---
+
+## Architecture
+
+### Original Hackathon Build (Google Cloud)
+
+```
+Student Browser
+    ↓
+Cloud Run (FastAPI + React)
+    ↓
+Google ADK Root Agent → Resume Analyst Agent (Gemini 2.5 Flash)
+                      → Interview Coach Agent (Gemini 2.5 Flash)
+    ↓
+BigQuery (3 tables) + Vertex AI RAG Corpus (STAR, ATS, Competency docs)
+```
+
+### Local Rebuild (This Repo)
+
+```
+Student Browser
+    ↓
+FastAPI (server.py) + Vite Dev Server (React)
+    ↓
+Mode Detection + System Prompt Swapping → OpenAI gpt-4o-mini
+    ↓
+SQLite (crackd.db) + Local File RAG (rag_docs/)
+```
+
+The multi-agent orchestration from Google ADK has been replaced with simple mode detection — the server analyses each message and session state, selects the right system prompt (resume analyst, career advisor, or interview coach), and sends it as a chat completion to OpenAI. Same behaviour, no SDK dependency.
+
+### Migration Map
+
+| Layer | Hackathon | Local |
+|-------|-----------|-------|
+| LLM | Gemini 2.5 Flash | OpenAI `gpt-4o-mini` |
+| Agent Orchestration | Google ADK (root + 2 sub-agents) | Mode detection + prompt swapping |
+| Database | BigQuery (3 tables) | SQLite |
+| RAG | Vertex AI RAG Corpus | Local file retrieval (`rag_docs/`) |
+| PDF Parsing | PyMuPDF | PyMuPDF (unchanged) |
+| Frontend | React / Vite / Tailwind | React / Vite / Tailwind (identical) |
+| Deployment | Cloud Run (Docker) | Local / Docker / Render |
+
+---
 
 ## Tech Stack
 
-| Layer | Original (Hackathon) | Local Version |
-|-------|---------------------|---------------|
-| LLM | Gemini 2.5 Flash via Google ADK | OpenAI `gpt-4o-mini` via `openai` client |
-| Orchestration | Google ADK (root agent + sub-agents) | Simple mode detection + system prompt swapping |
-| Database | BigQuery (3 tables) | SQLite (`crackd.db`) |
-| RAG | Vertex AI RAG Corpus | Local file-based retrieval (`rag_docs/`) |
-| Frontend | React/Vite/Tailwind | React/Vite/Tailwind (identical) |
-| Deployment | Cloud Run (Docker) | Local dev / Docker |
+**Backend:** Python 3.12, FastAPI, OpenAI API, SQLite, PyMuPDF
 
-## Prerequisites
+**Frontend:** React 18, Vite, Tailwind CSS v4, react-markdown, jsPDF, lucide-react
 
-- **Python 3.12+** — [python.org/downloads](https://www.python.org/downloads/)
-- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
-- **OpenAI API Key** — [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+**Design System:** "Serene Scholar" — Newsreader + Inter fonts, teal primary palette, dark/light mode, glassmorphism cards
 
-## Setup (Windows — cmd or PowerShell)
-
-### 1. Clone the repo
-
-```cmd
-git clone https://github.com/Sriraj-p/crackd.git
-cd crackd
-```
-
-### 2. Create your `.env` file
-
-```cmd
-copy .env.example .env
-```
-
-Open `.env` in your editor and paste your OpenAI API key:
-
-```
-OPENAI_API_KEY=sk-your-actual-key-here
-OPENAI_MODEL=gpt-4o-mini
-```
-
-### 3. Install Python dependencies
-
-```cmd
-pip install -r requirements.txt
-```
-
-### 4. Install frontend dependencies and build
-
-```cmd
-cd frontend
-npm install
-npm run build
-cd ..
-```
-
-### 5. Run the server
-
-```cmd
-uvicorn server:app --host 0.0.0.0 --port 8080
-```
-
-Open **http://localhost:8080** in your browser.
-
-## Development Mode (Hot Reload)
-
-For frontend development with hot reload, run two terminals:
-
-**Terminal 1 — Backend:**
-```cmd
-uvicorn server:app --host 0.0.0.0 --port 8080 --reload
-```
-
-**Terminal 2 — Frontend dev server:**
-```cmd
-cd frontend
-npm run dev
-```
-
-The Vite dev server runs on `http://localhost:5173` and proxies `/api` calls to the backend on port 8080.
+---
 
 ## Project Structure
 
 ```
 crackd/
-├── server.py                    # FastAPI server (entry point)
+├── server.py                        # FastAPI entry point + mode detection
 ├── backend/
 │   └── core/
-│       ├── prompts.py           # System prompts (from original agents)
-│       ├── rag.py               # Local file-based RAG retrieval
-│       └── database.py          # SQLite persistence layer
-├── rag_docs/                    # Knowledge base documents
-│   ├── star_framework.txt
-│   ├── ats_scoring_criteria.txt
-│   └── competency_framework.txt
-├── frontend/                    # React/Vite/Tailwind (V5 codebase)
+│       ├── prompts.py               # All system prompts (analyst, coach, advisor)
+│       ├── rag.py                   # Local file-based RAG retrieval
+│       └── database.py              # SQLite persistence (3 tables)
+├── rag_docs/                        # Knowledge base
+│   ├── star_framework.txt           # STAR interview methodology
+│   ├── ats_scoring_criteria.txt     # ATS scoring dimensions
+│   └── competency_framework.txt     # Role competency assessment
+├── frontend/                        # React/Vite/Tailwind
 │   ├── index.html
 │   ├── package.json
 │   ├── vite.config.js
 │   └── src/
 │       ├── main.jsx
-│       ├── index.css            # "Serene Scholar" design system
-│       ├── App.jsx
+│       ├── index.css                # Serene Scholar design tokens
+│       ├── App.jsx                  # State management + routing
 │       └── components/
-│           ├── Layout.jsx
-│           ├── Sidebar.jsx
-│           ├── TopBar.jsx
-│           ├── LandingView.jsx
-│           ├── ResultsDashboard.jsx
-│           └── ChatView.jsx
+│           ├── Layout.jsx           # Shell (sidebar + topbar + footer)
+│           ├── Sidebar.jsx          # Navigation
+│           ├── TopBar.jsx           # Logo + time-aware greeting + theme toggle
+│           ├── LandingView.jsx      # Upload CV + job description
+│           ├── ResultsDashboard.jsx  # Score cards + analysis display
+│           └── ChatView.jsx         # Career chat + mock interview
 ├── requirements.txt
 ├── Dockerfile
 ├── .env.example
@@ -127,21 +111,71 @@ crackd/
 └── README.md
 ```
 
-## Architecture
+---
 
-The original hackathon build used Google ADK's multi-agent orchestration (root agent → resume_analyst + interview_coach sub-agents). This local version replaces that with:
+## Feature Roadmap
 
-- **Mode detection** (`server.py`) — analyses the user's message and session state to determine which system prompt to use
-- **System prompt swapping** (`backend/core/prompts.py`) — each "agent" is now a different system prompt injected into the OpenAI chat completion
-- **Conversation history** — maintained in-memory per session, passed as message context to OpenAI
+Planned development path from hackathon prototype to Masters dissertation deliverable.
 
-The frontend is **pixel-identical** to the V5 hackathon codebase.
+### Highest Priority — Core Dissertation Contributions
 
-## Git Workflow
+| Feature | Description |
+|---------|-------------|
+| **Voice Chat in Mock Interview** | Phase 1: Web Speech API (speech-to-text) so students speak answers aloud. Phase 2: Google Cloud Text-to-Speech so the AI interviewer responds in voice. The agent already maintains a named persona — adding voice brings that persona to life. |
+| **Login-Based Authentication** | Replace anonymous sessions with OAuth 2.0 / Firebase Auth. Enables persistent identity, personalised dashboards, and gated access. |
+| **30-Day Session Memory** | Store up to 30 days of analysis sessions, mock interview transcripts, and career chat history per user. Track progress over time across multiple CV iterations. |
 
-- `main` — stable branch
-- Feature branches → PRs into `main`
+### High Priority — Strong Feature Additions
 
-## License
+| Feature | Description |
+|---------|-------------|
+| **Target Company Prep** | Scrape Glassdoor, LeetCode, and Blind for company-specific question patterns, interview structure, and round breakdown. The Interview Coach receives the company profile as context. |
+| **Company Templates** | Pre-built interview profiles for FAANG, Big 4, and major tech companies with known question banks, round formats, and focus areas. |
+| **Compare Resumes** | Accept two CVs for structured side-by-side comparison against the same job description. Scores each independently. |
 
-Built by Sriraj Paruchuru — MSc AI & ML, University of Birmingham.
+### Medium Priority — Design & Reporting
+
+| Feature | Description |
+|---------|-------------|
+| **Redesign PDF Report** | Replace plain-text jsPDF export with branded, visually rich report: score visualisations, colour-coded gap analysis, structured sections. |
+| **Interview Round Selection** | Dropdown before interview starts: Phone Screen, Technical, Onsite, Behavioural, Hiring Manager, or custom. Agent adjusts question type and difficulty. |
+| **Pressure Mode** | Toggleable interview style with curveball questions, deliberately vague prompts, rapid topic pivots, and composure-testing scenarios. |
+
+### Low Priority — Polish
+
+| Feature | Description |
+|---------|-------------|
+| **Fix UI Bugs** | Light-mode CSS ordering, theme variable inconsistencies, responsive edge cases. |
+| **Refine Agent Scope** | Intent detection to distinguish general knowledge queries from personalised advice requests. |
+| **Mid-Session File Attachment** | Wire up the paperclip icon so students can drop a revised CV mid-conversation. |
+| **Save to Google Drive** | Export transcripts and reports directly to Google Drive with one click. |
+
+### Experimental
+
+- **Multilingual Interview Mode** — Let the student choose the interview language upfront; the agent responds natively in that language.
+- **Bring Your Own API Key** — Let power users select an alternative model (Claude, GPT-4o) for comparative evaluation of interview quality and scoring consistency across foundation models.
+
+---
+
+## Business Model
+
+| Tier | Price | What You Get |
+|------|-------|-------------|
+| **Free** | £0 | 1 resume analysis + 1 mock interview per month |
+| **Pro** | £9.99/mo | Unlimited sessions, voice interviews, branded PDF reports, progress tracking |
+| **University** | £3.99/student/mo | Billed to careers services. Aggregated cohort analytics on readiness gaps |
+| **B2B** (future) | Custom | Companies send candidates a CrackD session instead of one-way video interviews |
+
+---
+
+## Acknowledgements
+
+CrackD was built solo during the Google Cloud Agentic AI Hackathon "Boffin's Den" using Google ADK, Gemini 2.5 Flash, Vertex AI RAG, BigQuery, and Cloud Run. This repository is the local rebuild for continued development as a Masters dissertation project.
+
+**Google Cloud services used in the original build:** ADK (Agent Development Kit), Gemini 2.5 Flash, Vertex AI RAG, BigQuery, Cloud Run.
+
+---
+
+*Built by Sriraj Paruchuru — MSc AI & ML, University of Birmingham*
+
+*Stay Curious.*
