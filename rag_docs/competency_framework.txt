@@ -1,0 +1,96 @@
+# Competency Framework for Interview Assessment
+
+## Overview
+This framework defines the key competencies assessed during professional interviews across common graduate and early-career roles. Interviewers evaluate candidates against these dimensions to determine role fit.
+
+## Universal Competencies (All Roles)
+
+### Communication
+- Clarity of thought and expression
+- Ability to explain complex ideas simply
+- Active listening and responsiveness
+- Written communication quality (assessed via resume and follow-ups)
+- Presentation skills
+
+### Problem Solving
+- Structured thinking and logical reasoning
+- Breaking down complex problems into components
+- Identifying root causes vs symptoms
+- Creative and lateral thinking
+- Data-driven decision making
+
+### Adaptability
+- Response to changing requirements
+- Learning agility — how quickly can they pick up new tools/concepts?
+- Comfort with ambiguity
+- Resilience under pressure
+- Growth mindset evidence
+
+### Collaboration
+- Teamwork and cross-functional experience
+- Conflict resolution approach
+- Giving and receiving feedback
+- Stakeholder management
+- Remote/distributed team experience
+
+### Initiative & Ownership
+- Self-directed projects and contributions
+- Going beyond the minimum requirements
+- Proactive problem identification
+- Accountability for outcomes
+- Evidence of leadership (formal or informal)
+
+## Technical Role Competencies
+
+### Software Engineering
+- System design and architecture thinking
+- Code quality and best practices
+- Testing methodology and coverage
+- Performance optimisation awareness
+- Version control and CI/CD familiarity
+- Debugging and troubleshooting approach
+- API design and documentation
+
+### Data Science / ML Engineering
+- Statistical thinking and experimental design
+- Model selection and evaluation methodology
+- Data preprocessing and feature engineering
+- MLOps and model deployment awareness
+- Business problem framing
+- Visualisation and storytelling with data
+- Ethical AI considerations
+
+### Product Management
+- Customer empathy and user research
+- Prioritisation frameworks (RICE, MoSCoW, etc.)
+- Metrics definition and measurement
+- Stakeholder alignment
+- Technical fluency (not necessarily depth)
+- Go-to-market thinking
+- Roadmap planning and trade-off articulation
+
+## Assessment Scoring Guide
+
+### Level 1: No Evidence (0-20)
+Candidate shows no relevant experience or awareness of the competency.
+
+### Level 2: Basic Awareness (21-40)
+Candidate understands the concept but has limited practical experience.
+
+### Level 3: Developing (41-60)
+Candidate has some practical experience, can discuss examples, but depth is limited.
+
+### Level 4: Competent (61-80)
+Candidate demonstrates solid experience with clear, specific examples and measurable outcomes.
+
+### Level 5: Expert (81-100)
+Candidate shows deep expertise, mentors others, and can discuss nuanced trade-offs and advanced scenarios.
+
+## Interview Red Flags
+- Cannot provide specific examples (only theoretical knowledge)
+- Takes credit for team work without clarifying individual contribution
+- Blames others for failures without showing self-reflection
+- Cannot explain WHY they made certain decisions
+- Lacks curiosity — doesn't ask questions about the role or company
+- Inconsistencies between resume claims and interview responses
+- Unable to discuss failures or learning moments

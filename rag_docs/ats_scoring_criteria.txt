@@ -1,0 +1,68 @@
+# ATS (Applicant Tracking System) Scoring Criteria
+
+## Overview
+Applicant Tracking Systems automatically parse and score resumes before a human recruiter sees them. Understanding ATS criteria is essential for getting past the initial screen.
+
+## Key Scoring Dimensions
+
+### 1. Keyword Match Rate (Weight: 30%)
+- Direct matches: exact keywords from the job description found in resume
+- Semantic matches: related terms and synonyms
+- Technical skills: programming languages, frameworks, tools mentioned in JD
+- Soft skills: leadership, communication, collaboration keywords
+- Industry-specific terminology
+- Target: 60-80% keyword match rate for competitive applications
+
+### 2. Section Detection (Weight: 15%)
+ATS systems look for standard section headers:
+- Contact Information (name, email, phone, LinkedIn)
+- Summary / Professional Summary / Objective
+- Work Experience / Professional Experience
+- Education
+- Skills / Technical Skills
+- Projects (valuable for students)
+- Certifications
+- Avoid creative section names — ATS may not recognise them
+
+### 3. Formatting Compatibility (Weight: 15%)
+- Use standard fonts (Arial, Calibri, Times New Roman)
+- Avoid tables, columns, text boxes, headers/footers
+- No images, logos, or graphics
+- Use standard bullet points (•, -, *)
+- Save as .docx or .pdf (check which the employer prefers)
+- Keep file size under 5MB
+- Use standard date formats (Month Year or MM/YYYY)
+
+### 4. Skills Alignment (Weight: 25%)
+- Hard skills match: programming languages, tools, frameworks
+- Years of experience alignment
+- Education level match
+- Certification requirements met
+- Industry experience relevance
+
+### 5. Job Title Alignment (Weight: 15%)
+- Current/previous job titles similar to target role
+- Career progression shows trajectory toward target role
+- Functional alignment even if titles differ
+
+## Scoring Bands
+- 90-100%: Excellent match — likely to be shortlisted
+- 70-89%: Good match — competitive candidate
+- 50-69%: Moderate match — may be reviewed if applicant pool is small
+- Below 50%: Weak match — unlikely to pass ATS filter
+
+## Common ATS Failures
+1. Using .png or image-based resumes
+2. Putting key info in headers/footers (many ATS skip these)
+3. Using uncommon abbreviations without spelling them out
+4. Missing keywords that are explicitly in the job description
+5. Non-standard section headers (e.g., "My Journey" instead of "Work Experience")
+6. Spelling errors in key technical terms
+
+## Optimisation Tips
+- Mirror the exact language from the job description
+- Include both abbreviations and full terms (e.g., "Machine Learning (ML)")
+- List technical skills in a dedicated skills section AND in context within experience
+- Use standard job titles or include the target title in parentheses
+- Spell out numbers for small values, use digits for large ones
+- Include location information for each role

@@ -1,0 +1,68 @@
+# STAR Interview Framework
+
+## Overview
+The STAR method is a structured approach to answering behavioural interview questions by describing a specific Situation, Task, Action, and Result.
+
+## Components
+
+### Situation
+- Set the scene and give context
+- Be specific about time, place, and circumstances
+- Keep it concise — 2-3 sentences maximum
+- Choose situations relevant to the role you're applying for
+
+### Task
+- Describe your specific responsibility or challenge
+- Clarify what was expected of you
+- Distinguish your role from the team's role
+- Quantify the scope if possible (e.g., "managed a team of 5", "responsible for a £200k budget")
+
+### Action
+- This is the most important part — describe what YOU did
+- Use "I" not "we" — interviewers want to know your individual contribution
+- Be specific about your approach and reasoning
+- Explain WHY you chose that action over alternatives
+- Include technical details relevant to the role
+- Show leadership, initiative, or problem-solving skills
+
+### Result
+- Quantify outcomes wherever possible (%, £, time saved, users impacted)
+- Include both direct results and indirect benefits
+- Mention what you learned from the experience
+- If the result was negative, explain what you learned and what you'd do differently
+
+## Common STAR Mistakes
+1. Being too vague — "I worked on a project" tells the interviewer nothing
+2. Focusing on "we" instead of "I" — the interviewer is hiring YOU
+3. Skipping the Result — always close the loop with measurable outcomes
+4. Choosing irrelevant situations — tailor your stories to the job description
+5. Rambling — keep each STAR response to 2-3 minutes maximum
+
+## Behavioural Question Patterns
+- "Tell me about a time when..."
+- "Describe a situation where..."
+- "Give me an example of..."
+- "How did you handle..."
+- "What would you do if..."
+
+## Sample Questions by Category
+
+### Leadership
+- Tell me about a time you led a project with competing priorities
+- Describe a situation where you had to influence without authority
+- Give an example of when you mentored someone
+
+### Problem Solving
+- Tell me about a complex technical problem you solved
+- Describe a time when you had to make a decision with incomplete information
+- How did you approach a situation where the requirements were unclear?
+
+### Teamwork
+- Tell me about a time you disagreed with a colleague
+- Describe how you handled a conflict within your team
+- Give an example of successful cross-functional collaboration
+
+### Adaptability
+- Tell me about a time you had to learn something quickly
+- Describe a situation where your initial approach didn't work
+- How did you handle a major change in project direction?
