@@ -1,31 +1,35 @@
-# CrackD
-
-**AI-Powered Interview Preparation Platform**
+# CrackD: A Multi-Agent System for Personalised Interview Preparation Using RAG-Augmented LLMs
 
 > Winner — Google Cloud Agentic AI Hackathon "Boffin's Den" (Part 2 — Dragon's Den-style pitch)
-> Solo competitor · 40+ teams · Built by [Sriraj Paruchuru](https://github.com/Sriraj-p)
-> MSc Artificial Intelligence & Machine Learning, University of Birmingham
+> Solo competitor · 40+ teams
+>
+> **Sriraj Paruchuru** — MSc Artificial Intelligence & Machine Learning, University of Birmingham (2999550)
 
 ---
 
-## The Problem
+## Abstract
 
-Students apply to dozens of roles, get ghosted, and when they finally land an interview — they freeze because they've never practised in a way that feels real. Career services are overbooked. Mock interview tools ask generic questions. Nobody tells you the truth about your CV.
+CrackD is an AI-powered interview preparation platform that combines multi-agent orchestration, retrieval-augmented generation (RAG), and role-play simulation to deliver personalised, actionable feedback to university students. The system analyses resumes against job descriptions from dual HR and ATS perspectives, identifies competency gaps through a structured scoring framework, and conducts realistic mock interviews where the AI adopts the persona of a senior professional tailored to the target role.
 
-## The Solution
-
-Upload your CV and a job description. CrackD gives you:
-
-- **Resume Analysis** — Dual HR + ATS perspective. Four calibrated scores: Overall Fit, Experience Relevance, Resume Quality, and Growth Potential. Most students score 40–75. You have to be exceptional to break 80.
-- **Career Chat** — An AI career advisor that has read your analysis and gives targeted, actionable advice — not generic platitudes.
-- **Mock Interview** — An AI that role-plays as a senior professional for your target role. It introduces itself with a name and title, stays in character, asks one question at a time, pushes back on vague answers, and at the end gives you a verdict: *"Would I hire you for this role?"*
+Originally built as a solo entry for the Google Cloud Agentic AI Hackathon using Google ADK, Gemini 2.5 Flash, Vertex AI RAG, BigQuery, and Cloud Run, the platform has been rebuilt for local development and continued research as a Masters dissertation project.
 
 ---
 
-## Architecture
+## Research Contributions
 
-### Original Hackathon Build (Google Cloud)
+1. **Multi-agent orchestration without framework dependency** — The original Google ADK sub-agent routing has been replaced with a lightweight mode detection and system prompt swapping architecture, demonstrating that complex agent behaviours can be replicated through prompt engineering alone.
 
+2. **Dual-perspective resume evaluation** — A structured scoring framework that evaluates candidates simultaneously from HR (narrative, impact, red flags) and ATS (keyword match, formatting, section detection) perspectives across four calibrated dimensions.
+
+3. **RAG-augmented interview simulation** — The mock interview agent retrieves from a local knowledge corpus (STAR framework, ATS criteria, competency framework) to generate questions that target the candidate's specific weak areas identified during analysis.
+
+4. **Persona-persistent role-play** — The interview agent maintains a named senior professional persona throughout the session, adapts question difficulty based on performance, and delivers a structured hire/no-hire verdict with actionable feedback.
+
+---
+
+## System Architecture
+
+### Original Implementation (Google Cloud)
 ```
 Student Browser
     ↓
@@ -37,8 +41,7 @@ Google ADK Root Agent → Resume Analyst Agent (Gemini 2.5 Flash)
 BigQuery (3 tables) + Vertex AI RAG Corpus (STAR, ATS, Competency docs)
 ```
 
-### Local Rebuild (This Repo)
-
+### Local Rebuild (This Repository)
 ```
 Student Browser
     ↓
@@ -49,61 +52,58 @@ Mode Detection + System Prompt Swapping → OpenAI gpt-4o-mini
 SQLite (crackd.db) + Local File RAG (rag_docs/)
 ```
 
-The multi-agent orchestration from Google ADK has been replaced with simple mode detection — the server analyses each message and session state, selects the right system prompt (resume analyst, career advisor, or interview coach), and sends it as a chat completion to OpenAI. Same behaviour, no SDK dependency.
+### Component Migration
 
-### Migration Map
-
-| Layer | Hackathon | Local |
-|-------|-----------|-------|
+| Layer | Hackathon Implementation | Local Implementation |
+|-------|-------------------------|---------------------|
 | LLM | Gemini 2.5 Flash | OpenAI `gpt-4o-mini` |
 | Agent Orchestration | Google ADK (root + 2 sub-agents) | Mode detection + prompt swapping |
-| Database | BigQuery (3 tables) | SQLite |
-| RAG | Vertex AI RAG Corpus | Local file retrieval (`rag_docs/`) |
+| Data Persistence | BigQuery (3 tables) | SQLite |
+| Knowledge Retrieval | Vertex AI RAG Corpus | Local file-based retrieval (`rag_docs/`) |
 | PDF Parsing | PyMuPDF | PyMuPDF (unchanged) |
-| Frontend | React / Vite / Tailwind | React / Vite / Tailwind (identical) |
+| Frontend | React / Vite / Tailwind | React / Vite / Tailwind (unchanged) |
 | Deployment | Cloud Run (Docker) | Local / Docker / Render |
 
 ---
 
-## Tech Stack
+## Technical Stack
 
 **Backend:** Python 3.12, FastAPI, OpenAI API, SQLite, PyMuPDF
 
 **Frontend:** React 18, Vite, Tailwind CSS v4, react-markdown, jsPDF, lucide-react
 
-**Design System:** "Serene Scholar" — Newsreader + Inter fonts, teal primary palette, dark/light mode, glassmorphism cards
+**Design System:** "Serene Scholar" — Newsreader + Inter typefaces, teal primary palette, dark/light mode, glassmorphism surfaces
 
 ---
 
-## Project Structure
-
+## Repository Structure
 ```
 crackd/
 ├── server.py                        # FastAPI entry point + mode detection
 ├── backend/
 │   └── core/
-│       ├── prompts.py               # All system prompts (analyst, coach, advisor)
+│       ├── prompts.py               # System prompts (analyst, coach, advisor)
 │       ├── rag.py                   # Local file-based RAG retrieval
-│       └── database.py              # SQLite persistence (3 tables)
-├── rag_docs/                        # Knowledge base
+│       └── database.py              # SQLite persistence layer (3 tables)
+├── rag_docs/                        # Knowledge base corpus
 │   ├── star_framework.txt           # STAR interview methodology
-│   ├── ats_scoring_criteria.txt     # ATS scoring dimensions
-│   └── competency_framework.txt     # Role competency assessment
-├── frontend/                        # React/Vite/Tailwind
+│   ├── ats_scoring_criteria.txt     # ATS scoring dimensions & weights
+│   └── competency_framework.txt     # Role competency assessment criteria
+├── frontend/                        # React / Vite / Tailwind
 │   ├── index.html
 │   ├── package.json
 │   ├── vite.config.js
 │   └── src/
 │       ├── main.jsx
-│       ├── index.css                # Serene Scholar design tokens
-│       ├── App.jsx                  # State management + routing
+│       ├── index.css                # Design system tokens
+│       ├── App.jsx                  # State management + view routing
 │       └── components/
-│           ├── Layout.jsx           # Shell (sidebar + topbar + footer)
+│           ├── Layout.jsx           # Application shell
 │           ├── Sidebar.jsx          # Navigation
-│           ├── TopBar.jsx           # Logo + time-aware greeting + theme toggle
-│           ├── LandingView.jsx      # Upload CV + job description
-│           ├── ResultsDashboard.jsx  # Score cards + analysis display
-│           └── ChatView.jsx         # Career chat + mock interview
+│           ├── TopBar.jsx           # Branding + theme toggle
+│           ├── LandingView.jsx      # Resume upload + job description input
+│           ├── ResultsDashboard.jsx  # Score visualisation + analysis display
+│           └── ChatView.jsx         # Career chat + mock interview interface
 ├── requirements.txt
 ├── Dockerfile
 ├── .env.example
@@ -113,69 +113,49 @@ crackd/
 
 ---
 
-## Feature Roadmap
+## Planned Research Extensions
 
-Planned development path from hackathon prototype to Masters dissertation deliverable.
+Development roadmap from hackathon prototype to Masters dissertation deliverable.
 
 ### Highest Priority — Core Dissertation Contributions
 
-| Feature | Description |
-|---------|-------------|
-| **Voice Chat in Mock Interview** | Phase 1: Web Speech API (speech-to-text) so students speak answers aloud. Phase 2: Google Cloud Text-to-Speech so the AI interviewer responds in voice. The agent already maintains a named persona — adding voice brings that persona to life. |
-| **Login-Based Authentication** | Replace anonymous sessions with OAuth 2.0 / Firebase Auth. Enables persistent identity, personalised dashboards, and gated access. |
-| **30-Day Session Memory** | Store up to 30 days of analysis sessions, mock interview transcripts, and career chat history per user. Track progress over time across multiple CV iterations. |
+| Feature | Research Value |
+|---------|---------------|
+| **Voice-Based Interview Simulation** | Phase 1: Web Speech API (STT) for spoken responses. Phase 2: Google Cloud TTS for interviewer voice. Enables investigation of modality effects on candidate performance and anxiety. |
+| **User Authentication & Persistent Identity** | OAuth 2.0 / Firebase Auth. Required infrastructure for longitudinal study of student interview readiness over time. |
+| **30-Day Session Memory & Progress Tracking** | Store analysis sessions, transcripts, and scores per user. Enables measurement of score improvement across multiple CV iterations — core evaluation metric for the dissertation. |
 
-### High Priority — Strong Feature Additions
+### High Priority — Feature Extensions
 
-| Feature | Description |
-|---------|-------------|
-| **Target Company Prep** | Scrape Glassdoor, LeetCode, and Blind for company-specific question patterns, interview structure, and round breakdown. The Interview Coach receives the company profile as context. |
-| **Company Templates** | Pre-built interview profiles for FAANG, Big 4, and major tech companies with known question banks, round formats, and focus areas. |
-| **Compare Resumes** | Accept two CVs for structured side-by-side comparison against the same job description. Scores each independently. |
+| Feature | Research Value |
+|---------|---------------|
+| **Target Company Preparation** | Scrape Glassdoor, LeetCode, and Blind for company-specific question patterns. Investigates whether company-contextualised preparation improves interview specificity. |
+| **Company Templates** | Pre-built interview profiles for high-data employers (FAANG, Big 4). Baseline for comparing generated vs curated question quality. |
+| **Resume Comparison** | Side-by-side dual-CV analysis against the same job description. Enables A/B evaluation of resume strategies. |
 
-### Medium Priority — Design & Reporting
+### Medium Priority — Interaction Design
 
-| Feature | Description |
-|---------|-------------|
-| **Redesign PDF Report** | Replace plain-text jsPDF export with branded, visually rich report: score visualisations, colour-coded gap analysis, structured sections. |
-| **Interview Round Selection** | Dropdown before interview starts: Phone Screen, Technical, Onsite, Behavioural, Hiring Manager, or custom. Agent adjusts question type and difficulty. |
-| **Pressure Mode** | Toggleable interview style with curveball questions, deliberately vague prompts, rapid topic pivots, and composure-testing scenarios. |
-
-### Low Priority — Polish
-
-| Feature | Description |
-|---------|-------------|
-| **Fix UI Bugs** | Light-mode CSS ordering, theme variable inconsistencies, responsive edge cases. |
-| **Refine Agent Scope** | Intent detection to distinguish general knowledge queries from personalised advice requests. |
-| **Mid-Session File Attachment** | Wire up the paperclip icon so students can drop a revised CV mid-conversation. |
-| **Save to Google Drive** | Export transcripts and reports directly to Google Drive with one click. |
+| Feature | Research Value |
+|---------|---------------|
+| **Branded PDF Reports** | Structured diagnostic with score visualisations and gap analysis. Designed for sharing with career services advisors. |
+| **Interview Round Selection** | Round-specific question generation (Phone Screen, Technical, Behavioural, etc.). Studies how round context affects question difficulty and type distribution. |
+| **Pressure Mode** | Curveball questions, vague prompts, rapid pivots. Measures candidate composure under adversarial interview conditions. |
 
 ### Experimental
 
-- **Multilingual Interview Mode** — Let the student choose the interview language upfront; the agent responds natively in that language.
-- **Bring Your Own API Key** — Let power users select an alternative model (Claude, GPT-4o) for comparative evaluation of interview quality and scoring consistency across foundation models.
-
----
-
-## Business Model
-
-| Tier | Price | What You Get |
-|------|-------|-------------|
-| **Free** | £0 | 1 resume analysis + 1 mock interview per month |
-| **Pro** | £9.99/mo | Unlimited sessions, voice interviews, branded PDF reports, progress tracking |
-| **University** | £3.99/student/mo | Billed to careers services. Aggregated cohort analytics on readiness gaps |
-| **B2B** (future) | Custom | Companies send candidates a CrackD session instead of one-way video interviews |
+- **Multilingual Interview Mode** — Native-language interview sessions for investigating cross-lingual LLM performance in structured assessment.
+- **Cross-Model Evaluation** — BYOK support for comparative analysis of interview quality, scoring consistency, and response latency across foundation models (Gemini, GPT-4o, Claude) using identical prompts and RAG pipeline.
 
 ---
 
 ## Acknowledgements
 
-CrackD was built solo during the Google Cloud Agentic AI Hackathon "Boffin's Den" using Google ADK, Gemini 2.5 Flash, Vertex AI RAG, BigQuery, and Cloud Run. This repository is the local rebuild for continued development as a Masters dissertation project.
+CrackD was built solo during the Google Cloud Agentic AI Hackathon "Boffin's Den" using Google ADK, Gemini 2.5 Flash, Vertex AI RAG, BigQuery, and Cloud Run.
 
 **Google Cloud services used in the original build:** ADK (Agent Development Kit), Gemini 2.5 Flash, Vertex AI RAG, BigQuery, Cloud Run.
 
 ---
 
-*Built by Sriraj Paruchuru — MSc AI & ML, University of Birmingham*
+*Sriraj Paruchuru — MSc Artificial Intelligence & Machine Learning, University of Birmingham*
 
 *Stay Curious.*
