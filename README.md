@@ -1,6 +1,6 @@
 # CrackD — AI-Powered Interview Preparation Platform
 
-> Winner — Google Cloud Agentic AI Hackathon "Boffin's Den" (solo competitor, 40+ teams)
+> Winner — Google Cloud Agentic AI Hackathon "Boffin's Den" (solo competitor)
 > 
 > Rebuilt for local development with OpenAI backend, SQLite persistence, and no cloud dependencies.
 
