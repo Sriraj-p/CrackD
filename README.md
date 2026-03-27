@@ -3,7 +3,7 @@
 **AI-Powered Interview Preparation Platform**
 
 > Winner — Google Cloud Agentic AI Hackathon "Boffin's Den" (Part 2 — Dragon's Den-style pitch)
-> Solo competitor · 40+ teams · Built by [Sriraj Paruchuru](https://github.com/Sriraj-p)
+> Solo competitor · Built by [Sriraj Paruchuru](https://github.com/Sriraj-p)
 > MSc Artificial Intelligence & Machine Learning, University of Birmingham
 
 ---
