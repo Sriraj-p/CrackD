@@ -31,6 +31,82 @@ export default function Layout({ currentView, onNavigate, theme, onToggleTheme, 
           onToggleTheme={onToggleTheme}
         />
 
+        {/* Announcement Banner */}
+        <div style={{
+          background: 'var(--primary)',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}>
+          <div style={{
+            display: 'inline-block',
+            animation: 'scroll-left 30s linear infinite',
+            padding: '6px 0',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            color: 'var(--on-primary)',
+          }}>
+            🚀 CrackD V2 is coming — Voice Chat interviews, Login-based sessions, 30-day progress tracking, Company-specific prep & more — Stay tuned!
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            🚀 CrackD V2 is coming — Voice Chat interviews, Login-based sessions, 30-day progress tracking, Company-specific prep & more — Stay tuned!
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            🚀 CrackD V2 is coming — Voice Chat interviews, Login-based sessions, 30-day progress tracking, Company-specific prep & more — Stay tuned!
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            🚀 CrackD V2 is coming — Voice Chat interviews, Login-based sessions, 30-day progress tracking, Company-specific prep & more — Stay tuned!
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          </div>
+        </div>
+
+        {/* Contact Bar */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '24px',
+          padding: '6px 32px',
+          background: 'var(--surface-dim)',
+          borderBottom: '1px solid var(--outline-variant)',
+          flexShrink: 0,
+          fontSize: '0.7rem',
+          color: 'var(--on-surface-dim)',
+          letterSpacing: '0.03em',
+        }}>
+          <span>For enquiries & collaboration:</span>
+          <a
+            href="mailto:sriraj.paruchuru@gmail.com"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              color: 'var(--primary)',
+              textDecoration: 'none',
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            ✉ sriraj.paruchuru@gmail.com
+          </a>
+          <a
+            href="https://instagram.com/sriraj_p"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              color: 'var(--primary)',
+              textDecoration: 'none',
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            📷 @sriraj_p
+          </a>
+        </div>
+
         {/* Content */}
         <main style={{
           flex: 1,
@@ -39,6 +115,7 @@ export default function Layout({ currentView, onNavigate, theme, onToggleTheme, 
         }}>
           {children}
         </main>
+
         {/* Footer */}
         <footer style={{
           padding: '12px 32px',
