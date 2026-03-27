@@ -12,11 +12,10 @@ export default function Layout({ currentView, onNavigate, theme, onToggleTheme, 
     }}>
       {/* Sidebar */}
       <Sidebar
-    currentView={currentView}
-    chatMode={chatMode}
-    onNavigate={onNavigate}
-    hasResults={hasResults}
-  />
+        currentView={currentView}
+        onNavigate={onNavigate}
+        hasResults={hasResults}
+      />
 
       {/* Main area */}
       <div style={{
