@@ -1,9 +1,14 @@
 # CrackD: A Multi-Agent System for Personalised Interview Preparation Using RAG-Augmented LLMs
 
 > Winner — Google Cloud Agentic AI Hackathon "Boffin's Den" (Part 2 — Dragon's Den-style pitch)
+<<<<<<< HEAD
 > Solo competitor · 40+ teams
 >
 > **Sriraj Paruchuru** — MSc Artificial Intelligence & Machine Learning, University of Birmingham (2999550)
+=======
+> Solo competitor · Built by [Sriraj Paruchuru](https://github.com/Sriraj-p)
+> MSc Artificial Intelligence & Machine Learning, University of Birmingham
+>>>>>>> 360cc71f72cbe43d26bb564b242f8f55da309b3f
 
 ---
 
