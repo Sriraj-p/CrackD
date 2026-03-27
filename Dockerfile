@@ -1,7 +1,7 @@
-FROM node:18-slim AS frontend
+FROM node:20-slim AS frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci --platform=linux --arch=x64
 COPY frontend/ ./
 RUN npm run build
 
