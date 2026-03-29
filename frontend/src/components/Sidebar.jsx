@@ -7,9 +7,9 @@ const navItems = [
   { id: 'results', label: 'Resume Lab', icon: FileText },
 ]
 
-export default function Sidebar({ currentView, onNavigate, hasResults }) {
+export default function Sidebar({ currentView, chatMode, onNavigate, hasResults }) {
   const getActiveId = () => {
-    if (currentView === 'chat') return 'career'
+    if (currentView === 'chat') return chatMode === 'interview' ? 'interview' : 'career'
     return currentView
   }
   const activeId = getActiveId()

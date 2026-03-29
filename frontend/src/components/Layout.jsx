@@ -1,7 +1,7 @@
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 
-export default function Layout({ currentView, onNavigate, theme, onToggleTheme, hasResults, children }) {
+export default function Layout({ currentView, chatMode, onNavigate, theme, onToggleTheme, hasResults, children }) {
   return (
     <div style={{
       display: 'flex',
@@ -13,6 +13,7 @@ export default function Layout({ currentView, onNavigate, theme, onToggleTheme, 
       {/* Sidebar */}
       <Sidebar
         currentView={currentView}
+        chatMode={chatMode}
         onNavigate={onNavigate}
         hasResults={hasResults}
       />
