@@ -167,7 +167,7 @@ export default function App() {
 
   const handleNavigate = (view) => {
     if (view === 'landing') {
-      if (scores) {
+      if (scores || analysisResult) {
         const confirmed = window.confirm('Are you sure you want to exit? This will clear your session.')
         if (!confirmed) return
         resetSession()
@@ -209,6 +209,8 @@ export default function App() {
           <ResultsDashboard
             analysis={analysisResult}
             scores={scores}
+            onCareerChat={handleStartCareerChat}
+            onMockInterview={handleStartInterview}
             onBack={() => {
               const confirmed = window.confirm('Are you sure you want to exit? This will clear your session.')
               if (confirmed) resetSession()
@@ -241,7 +243,7 @@ export default function App() {
       onNavigate={handleNavigate}
       theme={theme}
       onToggleTheme={toggleTheme}
-      hasResults={!!scores}
+      hasResults={!!scores || !!analysisResult}
     >
       {renderView()}
     </Layout>
