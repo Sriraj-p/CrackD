@@ -1,23 +1,25 @@
-import asyncio
 import os
 import re
 import uuid
-import json
-import sqlite3
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
+from sqlalchemy.orm import Session
 
 load_dotenv()
 
 from backend.core.prompts import ROOT_PROMPT, RESUME_ANALYST_PROMPT, INTERVIEW_COACH_PROMPT
 from backend.core.rag import retrieve_interview_frameworks
-from backend.core.database import init_db, store_analysis, get_student_history, get_latest_analysis, store_interview_session
+from backend.core.database import get_db
+from backend.core.auth import require_auth
+from backend.models.user import User
+from backend.routes.auth import router as auth_router
+from backend.services.analysis import store_analysis
 
 app = FastAPI()
 
@@ -28,11 +30,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount auth routes
+app.include_router(auth_router)
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-
-# Initialize database
-init_db()
 
 # In-memory session store
 sessions = {}
@@ -74,10 +76,8 @@ def clean_response(text: str) -> str:
 
 
 def detect_mode(message: str, session_data: dict) -> str:
-    """Detect which mode/agent to route to based on message content and session state."""
     msg_lower = message.lower()
 
-    # If session already has an analysis and user asks for interview
     if any(kw in msg_lower for kw in [
         "mock interview", "start interview", "interview practice",
         "start a mock", "get into character", "stay in character",
@@ -85,38 +85,31 @@ def detect_mode(message: str, session_data: dict) -> str:
     ]):
         return "interview"
 
-    # If message contains a resume (long text with resume-like content)
     if any(kw in msg_lower for kw in ["here is my resume", "my resume:", "resume:"]):
         return "analysis"
 
-    # If session has been in interview mode, stay there
     if session_data.get("mode") == "interview":
         return "interview"
 
-    # If session has been in career mode, stay there
     if session_data.get("mode") == "career":
         return "career"
 
-    # Career-related questions
     if any(kw in msg_lower for kw in [
         "career", "advisor", "discuss", "resume", "improve",
         "gap", "strategy", "career chat", "career advice"
     ]):
         return "career"
 
-    # Default: if analysis exists, career chat; otherwise root
     if session_data.get("has_analysis"):
         return "career"
     return "root"
 
 
 def build_system_prompt(mode: str, session_data: dict) -> str:
-    """Build the appropriate system prompt based on detected mode."""
     if mode == "analysis":
         return RESUME_ANALYST_PROMPT
 
     if mode == "interview":
-        # Enrich with RAG content
         rag_content = retrieve_interview_frameworks("interview preparation STAR behavioral technical")
         analysis_context = session_data.get("analysis_summary", "")
         extra_context = ""
@@ -150,29 +143,23 @@ Confident, direct, supportive. Like a sharp friend who works in recruiting.
             career_prompt += f"\n\n## STUDENT'S ANALYSIS CONTEXT\n{analysis_context}"
         return career_prompt
 
-    # Root/default
     return ROOT_PROMPT
 
 
 def run_completion(session_data: dict, message: str) -> str:
-    """Run an OpenAI chat completion with the appropriate system prompt."""
     mode = detect_mode(message, session_data)
 
-    # Update session mode (but don't override analysis mode—that's one-shot)
     if mode in ("career", "interview"):
         session_data["mode"] = mode
 
     system_prompt = build_system_prompt(mode, session_data)
 
-    # Build messages list with conversation history
     messages = [{"role": "system", "content": system_prompt}]
 
-    # Add conversation history (keep last 20 messages to stay within token limits)
     history = session_data.get("history", [])
     for h in history[-20:]:
         messages.append(h)
 
-    # Add current message
     messages.append({"role": "user", "content": message})
 
     try:
@@ -184,7 +171,6 @@ def run_completion(session_data: dict, message: str) -> str:
         )
         assistant_reply = response.choices[0].message.content
 
-        # Store in history
         history.append({"role": "user", "content": message})
         history.append({"role": "assistant", "content": assistant_reply})
         session_data["history"] = history
@@ -195,23 +181,28 @@ def run_completion(session_data: dict, message: str) -> str:
 
 
 @app.post("/api/session")
-async def create_session():
+async def create_session(current_user: User = Depends(require_auth)):
     frontend_id = uuid.uuid4().hex
     sessions[frontend_id] = {
         "history": [],
         "mode": None,
         "has_analysis": False,
         "analysis_summary": "",
+        "user_id": str(current_user.id),
     }
     return {"session_id": frontend_id}
 
 
 @app.post("/api/chat")
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, current_user: User = Depends(require_auth)):
     if req.session_id not in sessions:
         return ChatResponse(response="Session not found. Please refresh.", session_id=req.session_id)
 
     session_data = sessions[req.session_id]
+
+    if session_data.get("user_id") != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not your session.")
+
     response_text = run_completion(session_data, req.message)
     scores = extract_scores(response_text)
 
@@ -228,11 +219,16 @@ async def upload_resume(
     job_description: str = Form(...),
     file: UploadFile = File(None),
     resume_text: str = Form(""),
+    current_user: User = Depends(require_auth),
+    db: Session = Depends(get_db),
 ):
     if session_id not in sessions:
         return ChatResponse(response="Session not found.", session_id=session_id)
 
     session_data = sessions[session_id]
+
+    if session_data.get("user_id") != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not your session.")
 
     resume_content = resume_text.strip()
     if file and file.filename:
@@ -255,23 +251,20 @@ async def upload_resume(
 
     message = f"Here is my resume:\n\n{resume_content}\n\n{job_description}"
 
-    # Force analysis mode for this request
     session_data["mode"] = "analysis"
     response_text = run_completion(session_data, message)
     scores = extract_scores(response_text)
 
-    # Mark session as having analysis
     session_data["has_analysis"] = True
-    session_data["mode"] = None  # Reset mode so next message can be routed freely
-    # Store a summary for career chat and interview context
+    session_data["mode"] = None
     session_data["analysis_summary"] = response_text[:3000]
 
-    # Store in SQLite
     try:
         store_analysis(
-            student_name="Student",
-            resume_text=resume_content[:5000],
-            job_description=job_description[:3000],
+            db=db,
+            user_id=current_user.id,
+            resume_text=resume_content,
+            job_description=job_description,
             job_url="",
             hr_analysis=response_text[:2000],
             ats_analysis="",

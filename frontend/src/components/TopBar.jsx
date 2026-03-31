@@ -1,4 +1,5 @@
-import { Moon, Sun, User } from 'lucide-react'
+import { useState } from 'react'
+import { Moon, Sun, LogOut, ChevronDown, LogIn } from 'lucide-react'
 
 function getTimeGreeting() {
   const hour = new Date().getHours()
@@ -10,8 +11,9 @@ function getTimeGreeting() {
   return { text: 'burning the midnight oil I see, good luck!', emoji: '✨' }
 }
 
-export default function TopBar({ theme, onToggleTheme }) {
+export default function TopBar({ theme, onToggleTheme, user, onLogout, onSignIn }) {
   const greeting = getTimeGreeting()
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   return (
     <header style={{
@@ -55,7 +57,7 @@ export default function TopBar({ theme, onToggleTheme }) {
         </nav>
       </div>
 
-      {/* Right: Greeting + Theme + User */}
+      {/* Right: Greeting + Theme + User/SignIn */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {/* Time-aware greeting */}
         <span style={{
@@ -90,20 +92,131 @@ export default function TopBar({ theme, onToggleTheme }) {
           {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
 
-        {/* User avatar */}
-        <div style={{
-          width: 32,
-          height: 32,
-          borderRadius: '50%',
-          background: 'var(--surface-container-high)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          border: '1px solid var(--outline)',
-        }}>
-          <User size={16} color="var(--on-surface-variant)" />
-        </div>
+        {/* ─── Signed out: Sign In button ─── */}
+        {!user && (
+          <button
+            onClick={onSignIn}
+            className="btn-ghost"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 16px',
+              fontSize: '0.78rem',
+            }}
+          >
+            <LogIn size={15} />
+            Sign In
+          </button>
+        )}
+
+        {/* ─── Signed in: User dropdown ─── */}
+        {user && (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'transparent',
+                border: '1px solid var(--outline)',
+                borderRadius: '999px',
+                padding: '4px 12px 4px 4px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+              onMouseLeave={e => {
+                if (!showUserMenu) e.currentTarget.style.borderColor = 'var(--outline)'
+              }}
+            >
+              {/* Avatar — use Supabase avatar or initials */}
+              {user.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt=""
+                  style={{
+                    width: 28, height: 28, borderRadius: '50%',
+                    objectFit: 'cover',
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: 'var(--primary-container)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{
+                    fontSize: '0.7rem', fontWeight: 600,
+                    color: 'var(--primary)', fontFamily: 'var(--font-sans)',
+                  }}>
+                    {user.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                  </span>
+                </div>
+              )}
+              <span style={{
+                fontSize: '0.8rem', color: 'var(--on-surface)',
+                fontFamily: 'var(--font-sans)', fontWeight: 500,
+                maxWidth: '120px', overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {user.full_name?.split(' ')[0] || 'User'}
+              </span>
+              <ChevronDown size={14} color="var(--on-surface-dim)" style={{
+                transition: 'transform 0.2s',
+                transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0)',
+              }} />
+            </button>
+
+            {/* Dropdown */}
+            {showUserMenu && (
+              <>
+                <div onClick={() => setShowUserMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
+                <div className="glass-card" style={{
+                  position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                  minWidth: '200px', padding: '8px', zIndex: 100,
+                  boxShadow: 'var(--shadow-lg)',
+                  animation: 'fadeIn 0.15s var(--ease-out) both',
+                }}>
+                  <div style={{
+                    padding: '10px 12px',
+                    borderBottom: '1px solid var(--outline-variant)',
+                    marginBottom: '4px',
+                  }}>
+                    <p style={{
+                      fontSize: '0.82rem', fontWeight: 500,
+                      color: 'var(--on-surface)', fontFamily: 'var(--font-sans)',
+                    }}>
+                      {user.full_name}
+                    </p>
+                    <p style={{
+                      fontSize: '0.72rem', color: 'var(--on-surface-dim)',
+                      fontFamily: 'var(--font-sans)', marginTop: '2px',
+                    }}>
+                      {user.email}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setShowUserMenu(false); onLogout() }}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '10px 12px', background: 'transparent', border: 'none',
+                      borderRadius: '8px', cursor: 'pointer', color: 'var(--error)',
+                      fontSize: '0.8rem', fontFamily: 'var(--font-sans)', fontWeight: 500,
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(207, 102, 121, 0.08)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <LogOut size={15} />
+                    Sign out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </header>
   )

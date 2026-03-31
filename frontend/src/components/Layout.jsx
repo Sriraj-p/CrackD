@@ -1,7 +1,7 @@
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 
-export default function Layout({ currentView, chatMode, onNavigate, theme, onToggleTheme, hasResults, children }) {
+export default function Layout({ currentView, chatMode, onNavigate, theme, onToggleTheme, hasResults, user, onLogout, onSignIn, children }) {
   return (
     <div style={{
       display: 'flex',
@@ -30,6 +30,9 @@ export default function Layout({ currentView, chatMode, onNavigate, theme, onTog
         <TopBar
           theme={theme}
           onToggleTheme={onToggleTheme}
+          user={user}
+          onLogout={onLogout}
+          onSignIn={onSignIn}
         />
 
         {/* Announcement Banner */}
