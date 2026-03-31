@@ -51,7 +51,7 @@ export default function ChatView({
     : 'Live simulation with a senior professional.'
 
   // Show thinking indicator when: last message is from user OR chatLoading (hidden trigger in progress)
-  const isThinking = chatLoading || (messages.length > 0 && messages[messages.length - 1].role === 'user')
+  const isThinking = chatLoading
 
   return (
     <div style={{

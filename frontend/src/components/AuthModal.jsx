@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, Mail, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-export default function AuthModal({ onClose, onAuthSuccess }) {
+export default function AuthModal({ onClose }) {
   const [mode, setMode] = useState('options') // 'options' | 'email-login' | 'email-register'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -12,6 +12,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
   const [loading, setLoading] = useState(false)
 
   const handleOAuth = async (provider) => {
+    if (!supabase) { setError('Authentication not configured.'); return }
     setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -25,6 +26,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
 
   const handleEmailLogin = async (e) => {
     e.preventDefault()
+    if (!supabase) { setError('Authentication not configured.'); return }
     setError(null)
     setLoading(true)
 
@@ -41,6 +43,7 @@ export default function AuthModal({ onClose, onAuthSuccess }) {
 
   const handleEmailRegister = async (e) => {
     e.preventDefault()
+    if (!supabase) { setError('Authentication not configured.'); return }
     setError(null)
 
     if (password.length < 8) {

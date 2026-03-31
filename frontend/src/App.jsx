@@ -68,7 +68,9 @@ export default function App() {
         }
       } else {
         setUser(null)
-        handleLogout()
+        setSession(null)
+        setSessionId(null)
+        setCurrentView('landing')
       }
     })
 
