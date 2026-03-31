@@ -42,6 +42,8 @@ export default function App() {
 
   // ─── Supabase auth listener ───
   useEffect(() => {
+    if (!supabase) return
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s)
@@ -86,9 +88,11 @@ export default function App() {
   // ─── Helper: get auth headers ───
   const getAuthHeaders = useCallback(async (extra = {}) => {
     const headers = { ...extra }
-    const { data: { session: s } } = await supabase.auth.getSession()
-    if (s?.access_token) {
-      headers['Authorization'] = `Bearer ${s.access_token}`
+    if (supabase) {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      if (s?.access_token) {
+        headers['Authorization'] = `Bearer ${s.access_token}`
+      }
     }
     return headers
   }, [])
@@ -105,7 +109,7 @@ export default function App() {
 
   // ─── Logout ───
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    if (supabase) await supabase.auth.signOut()
     setSession(null)
     setUser(null)
     setSessionId(null)
