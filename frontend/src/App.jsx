@@ -117,6 +117,7 @@ export default function App() {
     setSession(null)
     setUser(null)
     setSessionId(null)
+    setSessionCreateFailed(false)
     setAnalysisResult(null)
     setScores(null)
     setCareerMessages([])
