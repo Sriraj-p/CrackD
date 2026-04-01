@@ -18,6 +18,7 @@ export default function App() {
 
   // ─── App state ───
   const [sessionId, setSessionId] = useState(null)
+  const [sessionCreateFailed, setSessionCreateFailed] = useState(false)
   const [currentView, setCurrentView] = useState('landing')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -58,6 +59,7 @@ export default function App() {
       if (s?.user) {
         setUser(buildUser(s.user))
         setShowAuthModal(false)
+        setSessionCreateFailed(false)
 
         // Execute pending action if one was stored
         if (pendingAction.current) {
@@ -132,9 +134,14 @@ export default function App() {
         method: 'POST',
         headers,
       })
-      if (res.status === 401) return null
+      if (res.status === 401) {
+        console.error('Session creation got 401 — token rejected by backend')
+        setSessionCreateFailed(true)
+        return null
+      }
       const data = await res.json()
       setSessionId(data.session_id)
+      setSessionCreateFailed(false)
       return data.session_id
     } catch (e) {
       console.error('Session creation failed:', e)
@@ -145,8 +152,8 @@ export default function App() {
 
   // Create backend session when auth session is available
   useEffect(() => {
-    if (session && !sessionId) createSession()
-  }, [session]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (session && !sessionId && !sessionCreateFailed) createSession()
+  }, [session, sessionId, sessionCreateFailed]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetSession = async () => {
     setAnalysisResult(null)

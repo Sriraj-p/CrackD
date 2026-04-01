@@ -4,7 +4,7 @@ python-multipart
 pymupdf
 openai
 python-dotenv
-python-jose[cryptography]
+PyJWT[crypto]
 sqlalchemy
 psycopg2-binary
 alembic
