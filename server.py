@@ -1,3 +1,7 @@
+# ─────────────────────────────────────────────────────────
+# FILE: server.py
+# ─────────────────────────────────────────────────────────
+
 import os
 import re
 import uuid
@@ -178,6 +182,16 @@ def run_completion(session_data: dict, message: str) -> str:
         return assistant_reply
     except Exception as e:
         return f"I encountered an issue processing your request. Please try again. Error: {str(e)}"
+
+
+# ─── Runtime config for frontend (replaces VITE_ build-time env vars) ───
+@app.get("/api/config")
+async def get_public_config():
+    """Serve public (non-secret) Supabase config to the frontend at runtime."""
+    return {
+        "supabaseUrl": os.environ.get("SUPABASE_URL", ""),
+        "supabaseAnonKey": os.environ.get("SUPABASE_ANON_KEY", ""),
+    }
 
 
 @app.post("/api/session")

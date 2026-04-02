@@ -1,6 +1,10 @@
+// ─────────────────────────────────────────────────────────
+// FILE: frontend/src/components/AuthModal.jsx
+// ─────────────────────────────────────────────────────────
+
 import { useState } from 'react'
 import { X, Mail, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 
 export default function AuthModal({ onClose }) {
   const [mode, setMode] = useState('options') // 'options' | 'email-login' | 'email-register'
@@ -12,6 +16,7 @@ export default function AuthModal({ onClose }) {
   const [loading, setLoading] = useState(false)
 
   const handleOAuth = async (provider) => {
+    const supabase = getSupabase()
     if (!supabase) { setError('Authentication not configured.'); return }
     setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
@@ -26,6 +31,7 @@ export default function AuthModal({ onClose }) {
 
   const handleEmailLogin = async (e) => {
     e.preventDefault()
+    const supabase = getSupabase()
     if (!supabase) { setError('Authentication not configured.'); return }
     setError(null)
     setLoading(true)
@@ -43,6 +49,7 @@ export default function AuthModal({ onClose }) {
 
   const handleEmailRegister = async (e) => {
     e.preventDefault()
+    const supabase = getSupabase()
     if (!supabase) { setError('Authentication not configured.'); return }
     setError(null)
 

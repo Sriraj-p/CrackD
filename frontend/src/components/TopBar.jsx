@@ -133,15 +133,32 @@ export default function TopBar({ theme, onToggleTheme, user, onLogout, onSignIn 
             >
               {/* Avatar — use Supabase avatar or initials */}
               {user.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt=""
-                  style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    objectFit: 'cover',
-                  }}
-                />
-              ) : (
+                  <>
+                    <img
+                      src={user.avatar_url}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
+                      onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling.style.display = 'flex' }}
+                      style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: 'var(--primary-container)',
+                      display: 'none', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span style={{
+                        fontSize: '0.7rem', fontWeight: 600,
+                        color: 'var(--primary)', fontFamily: 'var(--font-sans)',
+                      }}>
+                        {user.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                      </span>
+                    </div>
+                  </>
+                ) : (
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%',
                   background: 'var(--primary-container)',

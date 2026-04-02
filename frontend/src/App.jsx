@@ -1,10 +1,14 @@
+// ─────────────────────────────────────────────────────────
+// FILE: frontend/src/App.jsx
+// ─────────────────────────────────────────────────────────
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Layout from './components/Layout'
 import LandingView from './components/LandingView'
 import ResultsDashboard from './components/ResultsDashboard'
 import ChatView from './components/ChatView'
 import AuthModal from './components/AuthModal'
-import { supabase } from './lib/supabase'
+import { getSupabase } from './lib/supabase'
 
 const API_BASE = ''
 
@@ -43,6 +47,7 @@ export default function App() {
 
   // ─── Supabase auth listener ───
   useEffect(() => {
+    const supabase = getSupabase()
     if (!supabase) return
 
     // Get initial session
@@ -92,6 +97,7 @@ export default function App() {
   // ─── Helper: get auth headers ───
   const getAuthHeaders = useCallback(async (extra = {}) => {
     const headers = { ...extra }
+    const supabase = getSupabase()
     if (supabase) {
       const { data: { session: s } } = await supabase.auth.getSession()
       if (s?.access_token) {
@@ -113,6 +119,7 @@ export default function App() {
 
   // ─── Logout ───
   const handleLogout = async () => {
+    const supabase = getSupabase()
     if (supabase) await supabase.auth.signOut()
     setSession(null)
     setUser(null)

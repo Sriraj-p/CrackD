@@ -377,6 +377,9 @@ export default function ChatView({
             </button>
 
             <textarea
+              id="chat-message-input"
+              name="chat-message"
+              aria-label="Type your message"
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}

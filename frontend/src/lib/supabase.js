@@ -1,12 +1,22 @@
+// ─────────────────────────────────────────────────────────
+// FILE: frontend/src/lib/supabase.js
+// ─────────────────────────────────────────────────────────
+// Replaces the old supabase.js entirely.
+// Uses runtime config instead of build-time VITE_ env vars.
+
 import { createClient } from '@supabase/supabase-js'
+import { getConfig } from '../config'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+let _supabase = null
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in environment')
+export function getSupabase() {
+  if (!_supabase) {
+    const { supabaseUrl, supabaseAnonKey } = getConfig()
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Supabase URL or Anon Key missing from runtime config')
+      return null
+    }
+    _supabase = createClient(supabaseUrl, supabaseAnonKey)
+  }
+  return _supabase
 }
-
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null
