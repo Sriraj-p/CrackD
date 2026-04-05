@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Newsreader } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import { FluidCursor } from '@/components/effects/fluid-cursor'
 import './globals.css'
 
@@ -32,7 +31,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${geist.variable} ${geistMono.variable} ${newsreader.variable} font-sans antialiased`}>
         <FluidCursor />
         {children}
-        <Analytics />
       </body>
     </html>
   )

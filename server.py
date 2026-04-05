@@ -6,11 +6,11 @@ import os
 import re
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -33,6 +33,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 # Mount auth routes
@@ -292,83 +293,29 @@ async def upload_resume(
     return ChatResponse(response=clean_response(response_text), session_id=session_id, scores=scores)
 
 
-# ─── Health check (Render uses this to know the container is alive) ───
+# ─── Health check ───
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok"}
 
 
-# ─── Serve frontend build (only mount if dist exists) ───
-import pathlib
-
-frontend_dist = pathlib.Path("frontend/dist")
-if frontend_dist.exists():
-    print(f"[STARTUP] frontend/dist found — serving static frontend")
-
-    # Serve Next.js static assets (_next/*)
-    next_dir = frontend_dist / "_next"
-    if next_dir.exists():
-        app.mount("/_next", StaticFiles(directory=str(next_dir)), name="next-assets")
-
-    # Middleware to serve frontend pages AFTER all API routes are checked
-    @app.middleware("http")
-    async def serve_frontend_middleware(request, call_next):
-        path = request.url.path.lstrip("/")
-
-        # Let API routes pass through to FastAPI handlers — never intercept
-        if path.startswith("api/") or path.startswith("_next/"):
-            return await call_next(request)
-
-        # Only serve frontend for GET and HEAD requests
-        if request.method not in ("GET", "HEAD"):
-            return await call_next(request)
-
-        # Try exact HTML file (e.g., "login" -> "login.html")
-        html_file = frontend_dist / f"{path}.html"
-        if html_file.is_file():
-            return FileResponse(html_file, media_type="text/html")
-
-        # Try as static file (e.g., images, icons, favicon.ico)
-        static_file = frontend_dist / path
-        if static_file.is_file():
-            return FileResponse(static_file)
-
-        # Try index.html in subdirectory
-        index_file = frontend_dist / path / "index.html"
-        if index_file.is_file():
-            return FileResponse(index_file, media_type="text/html")
-
-        # Root path
-        if path == "" or path == "/":
-            return FileResponse(frontend_dist / "index.html", media_type="text/html")
-
-        # SPA fallback: ONLY for navigation requests (no file extension).
-        # Do NOT serve index.html for .js/.css/.png/.ico etc — those are
-        # genuinely missing assets and should get a real 404 so the browser
-        # (and devtools) can report the problem accurately.
-        has_extension = "." in path.split("/")[-1]
-        if has_extension:
-            # Static asset that doesn't exist — return real 404
-            return await call_next(request)
-
-        # Client-side route (e.g., /dashboard/settings) — serve index.html
-        return FileResponse(frontend_dist / "index.html", media_type="text/html")
-else:
-    print("[STARTUP] WARNING: frontend/dist not found — API-only mode")
-
-
-# ─── Startup: log registered routes so we can verify in Render logs ───
+# ─── Startup: log registered routes ───
 @app.on_event("startup")
 async def log_routes():
-    api_routes = []
     for route in app.routes:
         methods = getattr(route, "methods", None)
-        path = getattr(route, "path", getattr(route, "path_regex", "?"))
+        path = getattr(route, "path", "?")
         if methods:
-            for m in methods:
-                api_routes.append(f"  {m:6s} {path}")
+            print(f"[ROUTE] {', '.join(methods):20s} {path}")
         elif hasattr(route, "path"):
-            api_routes.append(f"  MOUNT {path}")
-    print(f"[STARTUP] Registered {len(api_routes)} routes:")
-    for r in api_routes:
-        print(r)
+            print(f"[ROUTE] {'MOUNT':20s} {path}")
+
+
+# ─── Static frontend (MUST be last — catch-all) ───
+# StaticFiles(html=True) serves .html files for clean URLs:
+#   /analysis-center → analysis-center.html
+#   / → index.html
+# API routes above are matched first because they're registered first.
+frontend_dist = Path("frontend/dist")
+if frontend_dist.exists():
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
