@@ -294,33 +294,46 @@ async def upload_resume(
 
 # Serve frontend build (only mount if dist exists)
 import pathlib
+from starlette.responses import Response as StarletteResponse
 frontend_dist = pathlib.Path("frontend/dist")
 if frontend_dist.exists():
     # Serve Next.js static assets (_next/*)
     app.mount("/_next", StaticFiles(directory="frontend/dist/_next"), name="next-assets")
 
-    # Catch-all: serve the correct HTML page for each route, or fall back to index.html
-    # Handles both GET and HEAD (Supabase middleware uses HEAD to check auth)
-    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
-    async def serve_frontend(full_path: str):
-        # Never intercept API routes — let FastAPI handle them
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="Not found")
+    # Middleware to serve frontend pages AFTER all API routes are checked
+    @app.middleware("http")
+    async def serve_frontend_middleware(request, call_next):
+        path = request.url.path.lstrip("/")
+
+        # Let API routes pass through to FastAPI handlers
+        if path.startswith("api/") or path.startswith("_next/"):
+            return await call_next(request)
+
+        # Only serve frontend for GET and HEAD requests
+        if request.method not in ("GET", "HEAD"):
+            return await call_next(request)
 
         # Try exact HTML file (e.g., "login" -> "login.html")
-        html_file = frontend_dist / f"{full_path}.html"
+        html_file = frontend_dist / f"{path}.html"
         if html_file.is_file():
             return FileResponse(html_file, media_type="text/html")
 
         # Try as static file (e.g., images, icons)
-        static_file = frontend_dist / full_path
+        static_file = frontend_dist / path
         if static_file.is_file():
             return FileResponse(static_file)
 
-        # Try index.html in subdirectory (e.g., "auth/callback" -> "auth/callback/index.html")
-        index_file = frontend_dist / full_path / "index.html"
+        # Try index.html in subdirectory
+        index_file = frontend_dist / path / "index.html"
         if index_file.is_file():
             return FileResponse(index_file, media_type="text/html")
 
-        # Fall back to root index.html (SPA client-side routing)
-        return FileResponse(frontend_dist / "index.html", media_type="text/html")
+        # Root path
+        if path == "" or path == "/":
+            return FileResponse(frontend_dist / "index.html", media_type="text/html")
+
+        # Let FastAPI try to handle it first, fall back to index.html on 404
+        response = await call_next(request)
+        if response.status_code == 404:
+            return FileResponse(frontend_dist / "index.html", media_type="text/html")
+        return response
