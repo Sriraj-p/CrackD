@@ -180,7 +180,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
         <motion.div key={pathname} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="p-6 lg:p-8 pt-4 lg:pt-4 max-w-6xl mx-auto">
+          className="p-6 lg:p-8 pt-4 lg:pt-4 max-w-7xl mx-auto">
           {children}
         </motion.div>
       </main>

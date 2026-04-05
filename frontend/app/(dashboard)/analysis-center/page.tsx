@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useSession } from '@/contexts/session-context'
 import { uploadResume, type AnalysisScores } from '@/lib/api'
+import { Markdown } from '@/components/ui/markdown'
 
 type UploadState = 'idle' | 'dragging' | 'uploaded' | 'analyzing' | 'done' | 'error'
 
@@ -106,12 +107,15 @@ export default function AnalysisCenterPage() {
     }
 
     // Store scores and analysis text
-    setScores(result.scores)
+    // If backend didn't return structured scores, use fallback defaults so results still display
+    const fallbackScores: AnalysisScores = { overall_fit: 0, experience_relevance: 0, resume_quality: 0, growth_potential: 0 }
+    const finalScores = result.scores || fallbackScores
+    setScores(finalScores)
     setAnalysisText(result.analysis)
 
     // Share with session context so mock interview and career chat can reference it
     setAnalysisResult(result.analysis)
-    setAnalysisScores(result.scores)
+    setAnalysisScores(finalScores)
 
     setUploadState('done')
     setShowResults(true)
@@ -328,8 +332,8 @@ export default function AnalysisCenterPage() {
           {analysisText && (
             <motion.div variants={fadeUp} className="glass-card rounded-2xl p-6">
               <h3 className="font-sans text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Detailed Analysis</h3>
-              <div className="font-sans text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                {analysisText}
+              <div className="font-sans">
+                <Markdown>{analysisText}</Markdown>
               </div>
             </motion.div>
           )}

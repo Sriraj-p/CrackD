@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useSession } from '@/contexts/session-context'
 import { sendChatMessage } from '@/lib/api'
+import { Markdown } from '@/components/ui/markdown'
 
 interface Message {
   role: 'assistant' | 'user'
@@ -98,38 +99,18 @@ export default function CareerChatPage() {
   }, [messages, isTyping])
 
   return (
-    <motion.div variants={stagger} initial="hidden" animate="visible" className="flex flex-col h-[calc(100vh-4rem)]">
-      <motion.div variants={fadeUp} className="mb-6 shrink-0 flex items-start justify-between">
-        <div>
-          <h1 className="font-serif text-3xl font-medium text-foreground mb-2">Career Chat</h1>
-          <p className="font-sans text-muted-foreground">
-            Get personalized career advice from your AI advisor
-            {analysisScores && <> — informed by your <span className="text-primary font-medium">resume analysis</span></>}
-            .
-          </p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="hidden md:block glass-card px-4 py-2.5 rounded-xl max-w-xs text-right shrink-0 ml-4"
-        >
-          <p className="font-sans text-sm text-primary font-medium italic">
-            {(() => {
-              const h = new Date().getHours()
-              if (h < 5) return "Night owl mode — let's plan your next move."
-              if (h < 9) return "Early riser. Great time to think about career strategy."
-              if (h < 12) return "Morning clarity — perfect for big career questions."
-              if (h < 17) return "Midday momentum. What's on your mind?"
-              if (h < 21) return "Evening reflection. Let's talk career."
-              return "Burning the midnight oil? I'm here for it."
-            })()}
-          </p>
-        </motion.div>
+    <motion.div variants={stagger} initial="hidden" animate="visible" className="flex flex-col h-[calc(100vh-7rem)] overflow-hidden">
+      <motion.div variants={fadeUp} className="mb-3 shrink-0">
+        <h1 className="font-serif text-2xl font-medium text-foreground mb-1">Career Chat</h1>
+        <p className="font-sans text-xs text-muted-foreground">
+          Get personalized career advice from your AI advisor
+          {analysisScores && <> — informed by your <span className="text-primary font-medium">resume analysis</span></>}
+          .
+        </p>
       </motion.div>
 
       {!analysisScores && (
-        <motion.div variants={fadeUp} className="mb-4 shrink-0 glass-card rounded-xl px-4 py-3 border border-amber-500/20 bg-amber-500/5">
+        <motion.div variants={fadeUp} className="mb-3 shrink-0 glass-card rounded-xl px-4 py-2.5 border border-amber-500/20 bg-amber-500/5">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
             <p className="font-sans text-xs text-muted-foreground">
@@ -150,7 +131,11 @@ export default function CareerChatPage() {
                   {msg.role === 'assistant' ? <Zap className="w-4 h-4 text-primary" /> : <span className="text-xs font-sans font-medium text-muted-foreground">You</span>}
                 </div>
                 <div className={`rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-primary/10 border border-primary/15' : 'bg-secondary/60 border border-border/50'}`}>
-                  <p className="font-sans text-sm text-foreground leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  {msg.role === 'user' ? (
+                    <p className="font-sans text-xs text-foreground leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  ) : (
+                    <div className="font-sans text-xs"><Markdown>{msg.content}</Markdown></div>
+                  )}
                 </div>
               </div>
             </motion.div>

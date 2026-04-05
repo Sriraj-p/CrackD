@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Zap } from 'lucide-react'
@@ -30,7 +31,9 @@ export default function LoginPage() {
             <p className="font-sans text-sm text-muted-foreground">AI-powered interview prep, built for focus</p>
           </div>
 
-          <LoginForm />
+          <Suspense fallback={<div className="h-48 flex items-center justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+            <LoginForm />
+          </Suspense>
 
           <div className="mt-8 text-center">
             <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-sans">

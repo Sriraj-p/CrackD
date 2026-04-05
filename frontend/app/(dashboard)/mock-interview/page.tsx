@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Mic, Send, RotateCcw, MessageSquare, Clock, Target, TrendingUp, Brain, Zap, ChevronRight, AlertCircle } from 'lucide-react'
 import { useSession } from '@/contexts/session-context'
 import { sendChatMessage } from '@/lib/api'
+import { Markdown } from '@/components/ui/markdown'
 
 type InterviewMode = 'setup' | 'starting' | 'active' | 'complete'
 
@@ -53,7 +54,9 @@ export default function MockInterviewPage() {
 
     // Send hidden message to backend to trigger interview mode
     // The backend's detect_mode will pick up "mock interview" and switch to interview mode
-    const hiddenPrompt = `Start a mock ${selectedType} interview for the role I was analysed for. Get into character as a senior interviewer appropriate for this role — introduce yourself with a name and title, then begin with your first question. Stay in character throughout. Focus on ${selectedType} questions.`
+    const companies = ['Google', 'Amazon', 'Meta', 'Apple', 'Microsoft', 'Netflix', 'Stripe', 'Uber', 'Airbnb', 'LinkedIn', 'Salesforce', 'Adobe', 'Databricks', 'Snowflake', 'Coinbase']
+    const company = companies[Math.floor(Math.random() * companies.length)]
+    const hiddenPrompt = `Start a mock ${selectedType} interview for the role I was analysed for. You are a senior interviewer at ${company}. Get into character — introduce yourself with a name and your title at ${company}, then begin with your first question. Stay in character throughout. Focus on ${selectedType} questions.`
 
     setIsThinking(true)
     const result = await sendChatMessage(sessionId, hiddenPrompt)
@@ -170,7 +173,7 @@ export default function MockInterviewPage() {
       )}
 
       {(mode === 'active' || mode === 'complete') && (
-        <div className="flex flex-col h-[calc(100vh-14rem)]">
+        <div className="flex flex-col h-[calc(100vh-12rem)]">
           {/* Header bar */}
           <div className="flex items-center justify-center gap-3 mb-4 flex-wrap">
             <div className="flex items-center gap-3 glass-card rounded-xl px-4 py-3">
@@ -216,7 +219,11 @@ export default function MockInterviewPage() {
                     </div>
                   ) : (
                     <div className={`rounded-2xl px-4 py-3 max-w-[80%] ${msg.role === 'user' ? 'bg-primary/10 border border-primary/15' : 'bg-secondary/60 border border-border/50'}`}>
-                      <p className="font-sans text-sm text-foreground leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      {msg.role === 'user' ? (
+                        <p className="font-sans text-sm text-foreground leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      ) : (
+                        <div className="font-sans"><Markdown>{msg.content}</Markdown></div>
+                      )}
                     </div>
                   )}
                 </motion.div>

@@ -113,6 +113,7 @@ export async function uploadResume(
     }
 
     const data: UploadResult = await res.json()
+    console.log('[API] Upload response:', { scores: data.scores, responseLength: data.response?.length, responsePreview: data.response?.substring(0, 200) })
     let finalScores = data.scores
     if (!finalScores) finalScores = parseScoresFallback(data.response)
 
