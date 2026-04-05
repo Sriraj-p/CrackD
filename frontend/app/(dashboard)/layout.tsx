@@ -76,10 +76,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setUser({ email: user.email, name: user.user_metadata?.full_name || user.email?.split('@')[0] })
+      } else {
+        // No authenticated user — redirect to login
+        router.push(`/login?redirect=${pathname}`)
       }
     }
     getUser()
-  }, [supabase.auth])
+  }, [supabase.auth, router, pathname])
 
   useEffect(() => {
     const root = document.documentElement
