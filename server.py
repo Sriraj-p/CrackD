@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -295,4 +296,26 @@ async def upload_resume(
 import pathlib
 frontend_dist = pathlib.Path("frontend/dist")
 if frontend_dist.exists():
-    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
+    # Serve Next.js static assets (_next/*)
+    app.mount("/_next", StaticFiles(directory="frontend/dist/_next"), name="next-assets")
+
+    # Catch-all: serve the correct HTML page for each route, or fall back to index.html
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Try exact HTML file (e.g., "login" -> "login.html")
+        html_file = frontend_dist / f"{full_path}.html"
+        if html_file.is_file():
+            return FileResponse(html_file, media_type="text/html")
+
+        # Try as static file (e.g., images, icons)
+        static_file = frontend_dist / full_path
+        if static_file.is_file():
+            return FileResponse(static_file)
+
+        # Try index.html in subdirectory (e.g., "auth/callback" -> "auth/callback/index.html")
+        index_file = frontend_dist / full_path / "index.html"
+        if index_file.is_file():
+            return FileResponse(index_file, media_type="text/html")
+
+        # Fall back to root index.html (SPA client-side routing)
+        return FileResponse(frontend_dist / "index.html", media_type="text/html")
