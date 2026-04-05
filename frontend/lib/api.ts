@@ -35,7 +35,8 @@ export async function createSession(): Promise<string | null> {
       return null
     }
     if (!res.ok) {
-      console.error('[API] Session creation failed:', res.status)
+      const body = await res.text().catch(() => '(no body)')
+      console.error(`[API] Session creation failed: ${res.status}`, body)
       return null
     }
     const data = await res.json()

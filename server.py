@@ -292,20 +292,30 @@ async def upload_resume(
     return ChatResponse(response=clean_response(response_text), session_id=session_id, scores=scores)
 
 
-# Serve frontend build (only mount if dist exists)
+# ─── Health check (Render uses this to know the container is alive) ───
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
+
+
+# ─── Serve frontend build (only mount if dist exists) ───
 import pathlib
-from starlette.responses import Response as StarletteResponse
+
 frontend_dist = pathlib.Path("frontend/dist")
 if frontend_dist.exists():
+    print(f"[STARTUP] frontend/dist found — serving static frontend")
+
     # Serve Next.js static assets (_next/*)
-    app.mount("/_next", StaticFiles(directory="frontend/dist/_next"), name="next-assets")
+    next_dir = frontend_dist / "_next"
+    if next_dir.exists():
+        app.mount("/_next", StaticFiles(directory=str(next_dir)), name="next-assets")
 
     # Middleware to serve frontend pages AFTER all API routes are checked
     @app.middleware("http")
     async def serve_frontend_middleware(request, call_next):
         path = request.url.path.lstrip("/")
 
-        # Let API routes pass through to FastAPI handlers
+        # Let API routes pass through to FastAPI handlers — never intercept
         if path.startswith("api/") or path.startswith("_next/"):
             return await call_next(request)
 
@@ -318,7 +328,7 @@ if frontend_dist.exists():
         if html_file.is_file():
             return FileResponse(html_file, media_type="text/html")
 
-        # Try as static file (e.g., images, icons)
+        # Try as static file (e.g., images, icons, favicon.ico)
         static_file = frontend_dist / path
         if static_file.is_file():
             return FileResponse(static_file)
@@ -332,8 +342,33 @@ if frontend_dist.exists():
         if path == "" or path == "/":
             return FileResponse(frontend_dist / "index.html", media_type="text/html")
 
-        # Let FastAPI try to handle it first, fall back to index.html on 404
-        response = await call_next(request)
-        if response.status_code == 404:
-            return FileResponse(frontend_dist / "index.html", media_type="text/html")
-        return response
+        # SPA fallback: ONLY for navigation requests (no file extension).
+        # Do NOT serve index.html for .js/.css/.png/.ico etc — those are
+        # genuinely missing assets and should get a real 404 so the browser
+        # (and devtools) can report the problem accurately.
+        has_extension = "." in path.split("/")[-1]
+        if has_extension:
+            # Static asset that doesn't exist — return real 404
+            return await call_next(request)
+
+        # Client-side route (e.g., /dashboard/settings) — serve index.html
+        return FileResponse(frontend_dist / "index.html", media_type="text/html")
+else:
+    print("[STARTUP] WARNING: frontend/dist not found — API-only mode")
+
+
+# ─── Startup: log registered routes so we can verify in Render logs ───
+@app.on_event("startup")
+async def log_routes():
+    api_routes = []
+    for route in app.routes:
+        methods = getattr(route, "methods", None)
+        path = getattr(route, "path", getattr(route, "path_regex", "?"))
+        if methods:
+            for m in methods:
+                api_routes.append(f"  {m:6s} {path}")
+        elif hasattr(route, "path"):
+            api_routes.append(f"  MOUNT {path}")
+    print(f"[STARTUP] Registered {len(api_routes)} routes:")
+    for r in api_routes:
+        print(r)
