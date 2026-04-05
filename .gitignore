@@ -19,6 +19,10 @@ crackd.db
 node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/.next/
+
+# Claude Code
+.claude/
 
 # IDE
 .vscode/
