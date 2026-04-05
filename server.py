@@ -300,8 +300,13 @@ if frontend_dist.exists():
     app.mount("/_next", StaticFiles(directory="frontend/dist/_next"), name="next-assets")
 
     # Catch-all: serve the correct HTML page for each route, or fall back to index.html
-    @app.get("/{full_path:path}")
+    # Handles both GET and HEAD (Supabase middleware uses HEAD to check auth)
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
     async def serve_frontend(full_path: str):
+        # Never intercept API routes — let FastAPI handle them
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+
         # Try exact HTML file (e.g., "login" -> "login.html")
         html_file = frontend_dist / f"{full_path}.html"
         if html_file.is_file():
