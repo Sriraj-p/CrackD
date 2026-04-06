@@ -9,13 +9,20 @@ import { ScrollVideoBackground } from '@/components/landing/scroll-video-backgro
 import { useScrollAnimations } from '@/hooks/use-scroll-animations'
 
 export default function Home() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme')
+      if (saved === 'light' || saved === 'dark') return saved
+    }
+    return 'dark'
+  })
   useScrollAnimations()
 
   useEffect(() => {
     const root = document.documentElement
     if (theme === 'dark') root.classList.add('dark')
     else root.classList.remove('dark')
+    localStorage.setItem('theme', theme)
   }, [theme])
 
   return (
