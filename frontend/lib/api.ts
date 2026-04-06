@@ -52,37 +52,81 @@ export async function createSession(): Promise<string | null> {
 
 export interface AnalysisScores {
   overall_fit: number
-  experience_relevance: number
-  resume_quality: number
-  growth_potential: number
+  hr_score: number
+  ats_score: number
+  knowledge_score: number
+  // Sub-scores for breakdown bars
+  keyword_match?: number
+  formatting?: number
+  impact_statements?: number
+  section_completeness?: number
+}
+
+export interface HighlightCard {
+  icon: 'check' | 'trending' | 'alert' | 'search'
+  title: string
+  description: string
 }
 
 export interface UploadResult {
   response: string
   session_id: string
   scores: AnalysisScores | null
+  highlights: HighlightCard[] | null
 }
 
+const SCORE_MARKERS = [
+  'OVERALL_FIT:', 'HR_SCORE:', 'ATS_SCORE:', 'KNOWLEDGE_SCORE:',
+  'KEYWORD_MATCH:', 'FORMATTING:', 'IMPACT_STATEMENTS:', 'SECTION_COMPLETENESS:',
+]
+
 function parseScoresFallback(text: string): AnalysisScores | null {
-  const patterns: Record<keyof AnalysisScores, RegExp> = {
+  const patterns: Record<string, RegExp> = {
     overall_fit: /OVERALL_FIT:\s*(\d+)/,
-    experience_relevance: /EXPERIENCE_RELEVANCE:\s*(\d+)/,
-    resume_quality: /RESUME_QUALITY:\s*(\d+)/,
-    growth_potential: /GROWTH_POTENTIAL:\s*(\d+)/,
+    hr_score: /HR_SCORE:\s*(\d+)/,
+    ats_score: /ATS_SCORE:\s*(\d+)/,
+    knowledge_score: /KNOWLEDGE_SCORE:\s*(\d+)/,
+    keyword_match: /KEYWORD_MATCH:\s*(\d+)/,
+    formatting: /FORMATTING:\s*(\d+)/,
+    impact_statements: /IMPACT_STATEMENTS:\s*(\d+)/,
+    section_completeness: /SECTION_COMPLETENESS:\s*(\d+)/,
   }
-  const scores: Partial<AnalysisScores> = {}
+  const scores: Record<string, number> = {}
   for (const [key, pattern] of Object.entries(patterns)) {
     const match = text.match(pattern)
-    if (match) scores[key as keyof AnalysisScores] = Math.min(100, Math.max(0, parseInt(match[1])))
+    if (match) scores[key] = Math.min(100, Math.max(0, parseInt(match[1])))
   }
-  return Object.keys(scores).length === 4 ? (scores as AnalysisScores) : null
+  // Need at least the 4 primary scores
+  if (['overall_fit', 'hr_score', 'ats_score', 'knowledge_score'].every(k => k in scores)) {
+    return scores as unknown as AnalysisScores
+  }
+  return null
+}
+
+function parseHighlightsFallback(text: string): HighlightCard[] | null {
+  const pattern = /HIGHLIGHT:\s*(\w+)\s*\|\s*([^|]+?)\s*\|\s*(.+)/g
+  const highlights: HighlightCard[] = []
+  let match
+  while ((match = pattern.exec(text)) !== null) {
+    highlights.push({
+      icon: match[1].trim() as HighlightCard['icon'],
+      title: match[2].trim(),
+      description: match[3].trim(),
+    })
+  }
+  return highlights.length >= 4 ? highlights.slice(0, 4) : null
 }
 
 function cleanResponse(text: string): string {
   let clean = text
-  for (const marker of ['OVERALL_FIT:', 'EXPERIENCE_RELEVANCE:', 'RESUME_QUALITY:', 'GROWTH_POTENTIAL:']) {
+  for (const marker of SCORE_MARKERS) {
     clean = clean.replace(new RegExp(`${marker}\\s*\\d+\\n?`, 'g'), '')
   }
+  // Remove HIGHLIGHT lines
+  clean = clean.replace(/HIGHLIGHT:\s*\w+\s*\|[^\n]*\n?/g, '')
+  // Remove leftover section headers for markers
+  clean = clean.replace(/###\s*Scores\s*\n?/g, '')
+  clean = clean.replace(/###\s*Highlight Cards\s*\n?/g, '')
   return clean.trim()
 }
 
@@ -91,7 +135,7 @@ export async function uploadResume(
   file: File | null,
   jobDescription: string,
   resumeText: string = '',
-): Promise<{ analysis: string; scores: AnalysisScores | null } | { error: string }> {
+): Promise<{ analysis: string; scores: AnalysisScores | null; highlights: HighlightCard[] | null } | { error: string }> {
   try {
     const formData = new FormData()
     formData.append('session_id', sessionId)
@@ -115,13 +159,16 @@ export async function uploadResume(
     }
 
     const data: UploadResult = await res.json()
-    console.log('[API] Upload response:', { scores: data.scores, responseLength: data.response?.length, responsePreview: data.response?.substring(0, 200) })
+    console.log('[API] Upload response:', { scores: data.scores, highlights: data.highlights, responseLength: data.response?.length })
     let finalScores = data.scores
     if (!finalScores) finalScores = parseScoresFallback(data.response)
+    let finalHighlights = data.highlights
+    if (!finalHighlights) finalHighlights = parseHighlightsFallback(data.response)
 
     return {
       analysis: cleanResponse(data.response),
       scores: finalScores,
+      highlights: finalHighlights,
     }
   } catch (e) {
     console.error('[API] Upload error:', e)

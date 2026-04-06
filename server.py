@@ -55,23 +55,46 @@ class ChatResponse(BaseModel):
     response: str
     session_id: str
     scores: dict | None = None
+    highlights: list[dict] | None = None
 
 
 def extract_scores(text: str) -> dict | None:
-    """Try to extract the four score markers from the analysis text via regex."""
-    patterns = {
+    """Extract all score markers from the analysis text via regex."""
+    # Primary scores
+    primary_patterns = {
         "overall_fit": r"OVERALL_FIT:\s*(\d+)",
-        "experience_relevance": r"EXPERIENCE_RELEVANCE:\s*(\d+)",
-        "resume_quality": r"RESUME_QUALITY:\s*(\d+)",
-        "growth_potential": r"GROWTH_POTENTIAL:\s*(\d+)",
+        "hr_score": r"HR_SCORE:\s*(\d+)",
+        "ats_score": r"ATS_SCORE:\s*(\d+)",
+        "knowledge_score": r"KNOWLEDGE_SCORE:\s*(\d+)",
+    }
+    # Sub-scores for the breakdown bars
+    sub_patterns = {
+        "keyword_match": r"KEYWORD_MATCH:\s*(\d+)",
+        "formatting": r"FORMATTING:\s*(\d+)",
+        "impact_statements": r"IMPACT_STATEMENTS:\s*(\d+)",
+        "section_completeness": r"SECTION_COMPLETENESS:\s*(\d+)",
     }
     scores = {}
-    for key, pattern in patterns.items():
+    for key, pattern in {**primary_patterns, **sub_patterns}.items():
         match = re.search(pattern, text)
         if match:
             scores[key] = min(100, max(0, int(match.group(1))))
-    if len(scores) == 4:
+
+    # Need at least the 4 primary scores
+    if all(k in scores for k in primary_patterns):
         return scores
+    return None
+
+
+def extract_highlights(text: str) -> list[dict] | None:
+    """Extract the 4 highlight cards from HIGHLIGHT: markers."""
+    pattern = r"HIGHLIGHT:\s*(\w+)\s*\|\s*([^|]+?)\s*\|\s*(.+)"
+    matches = re.findall(pattern, text)
+    if len(matches) >= 4:
+        return [
+            {"icon": m[0].strip(), "title": m[1].strip(), "description": m[2].strip()}
+            for m in matches[:4]
+        ]
     return None
 
 
@@ -82,15 +105,17 @@ def extract_scores_via_llm(analysis_text: str) -> dict | None:
             model=MODEL,
             messages=[
                 {"role": "system", "content": (
-                    "Extract four numerical scores (0-100) from the resume analysis below. "
-                    "Reply with ONLY these four lines, nothing else:\n"
-                    "OVERALL_FIT: <number>\nEXPERIENCE_RELEVANCE: <number>\n"
-                    "RESUME_QUALITY: <number>\nGROWTH_POTENTIAL: <number>"
+                    "Extract numerical scores (0-100) from the resume analysis below. "
+                    "Reply with ONLY these lines, nothing else:\n"
+                    "OVERALL_FIT: <number>\nHR_SCORE: <number>\n"
+                    "ATS_SCORE: <number>\nKNOWLEDGE_SCORE: <number>\n"
+                    "KEYWORD_MATCH: <number>\nFORMATTING: <number>\n"
+                    "IMPACT_STATEMENTS: <number>\nSECTION_COMPLETENESS: <number>"
                 )},
                 {"role": "user", "content": analysis_text[:3000]},
             ],
             temperature=0,
-            max_tokens=100,
+            max_tokens=200,
         )
         return extract_scores(response.choices[0].message.content)
     except Exception as e:
@@ -98,10 +123,22 @@ def extract_scores_via_llm(analysis_text: str) -> dict | None:
         return None
 
 
+# All score/highlight markers that should be stripped from the displayed analysis text
+_SCORE_MARKERS = [
+    "OVERALL_FIT:", "HR_SCORE:", "ATS_SCORE:", "KNOWLEDGE_SCORE:",
+    "KEYWORD_MATCH:", "FORMATTING:", "IMPACT_STATEMENTS:", "SECTION_COMPLETENESS:",
+]
+
+
 def clean_response(text: str) -> str:
     clean = text
-    for marker in ["OVERALL_FIT:", "EXPERIENCE_RELEVANCE:", "RESUME_QUALITY:", "GROWTH_POTENTIAL:"]:
+    for marker in _SCORE_MARKERS:
         clean = re.sub(rf"{marker}\s*\d+\n?", "", clean)
+    # Remove HIGHLIGHT lines
+    clean = re.sub(r"HIGHLIGHT:\s*\w+\s*\|[^\n]*\n?", "", clean)
+    # Remove leftover markdown headers for the markers section
+    clean = re.sub(r"###\s*Scores\s*\n?", "", clean)
+    clean = re.sub(r"###\s*Highlight Cards\s*\n?", "", clean)
     return clean.strip()
 
 
@@ -294,6 +331,7 @@ async def upload_resume(
     session_data["mode"] = "analysis"
     response_text = run_completion(session_data, message)
     scores = extract_scores(response_text)
+    highlights = extract_highlights(response_text)
 
     # Fallback: if the LLM didn't include score markers, ask it to score separately
     if scores is None:
@@ -319,7 +357,12 @@ async def upload_resume(
     except Exception as e:
         print(f"DB storage warning: {e}")
 
-    return ChatResponse(response=clean_response(response_text), session_id=session_id, scores=scores)
+    return ChatResponse(
+        response=clean_response(response_text),
+        session_id=session_id,
+        scores=scores,
+        highlights=highlights,
+    )
 
 
 # ─── Health check ───
