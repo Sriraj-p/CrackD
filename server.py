@@ -58,6 +58,7 @@ class ChatResponse(BaseModel):
 
 
 def extract_scores(text: str) -> dict | None:
+    """Try to extract the four score markers from the analysis text via regex."""
     patterns = {
         "overall_fit": r"OVERALL_FIT:\s*(\d+)",
         "experience_relevance": r"EXPERIENCE_RELEVANCE:\s*(\d+)",
@@ -72,6 +73,29 @@ def extract_scores(text: str) -> dict | None:
     if len(scores) == 4:
         return scores
     return None
+
+
+def extract_scores_via_llm(analysis_text: str) -> dict | None:
+    """Fallback: ask the LLM to extract scores from an analysis that's missing markers."""
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": (
+                    "Extract four numerical scores (0-100) from the resume analysis below. "
+                    "Reply with ONLY these four lines, nothing else:\n"
+                    "OVERALL_FIT: <number>\nEXPERIENCE_RELEVANCE: <number>\n"
+                    "RESUME_QUALITY: <number>\nGROWTH_POTENTIAL: <number>"
+                )},
+                {"role": "user", "content": analysis_text[:3000]},
+            ],
+            temperature=0,
+            max_tokens=100,
+        )
+        return extract_scores(response.choices[0].message.content)
+    except Exception as e:
+        print(f"[SCORES] LLM fallback failed: {e}")
+        return None
 
 
 def clean_response(text: str) -> str:
@@ -270,6 +294,11 @@ async def upload_resume(
     session_data["mode"] = "analysis"
     response_text = run_completion(session_data, message)
     scores = extract_scores(response_text)
+
+    # Fallback: if the LLM didn't include score markers, ask it to score separately
+    if scores is None:
+        print("[SCORES] Markers not found in response — trying LLM fallback")
+        scores = extract_scores_via_llm(response_text)
 
     session_data["has_analysis"] = True
     session_data["mode"] = None

@@ -106,16 +106,13 @@ export default function AnalysisCenterPage() {
       return
     }
 
-    // Store scores and analysis text
-    // If backend didn't return structured scores, use fallback defaults so results still display
-    const fallbackScores: AnalysisScores = { overall_fit: 0, experience_relevance: 0, resume_quality: 0, growth_potential: 0 }
-    const finalScores = result.scores || fallbackScores
-    setScores(finalScores)
+    // Store scores and analysis text (scores may be null if LLM didn't return them)
+    setScores(result.scores ?? null)
     setAnalysisText(result.analysis)
 
     // Share with session context so mock interview and career chat can reference it
     setAnalysisResult(result.analysis)
-    setAnalysisScores(finalScores)
+    setAnalysisScores(result.scores ?? null)
 
     setUploadState('done')
     setShowResults(true)
@@ -279,7 +276,7 @@ export default function AnalysisCenterPage() {
         </div>
       )}
 
-      {showResults && scores && (
+      {showResults && (
         <motion.div variants={stagger} initial="hidden" animate="visible" className="flex flex-col gap-6">
           {/* Header */}
           <motion.div variants={fadeUp}>
@@ -287,46 +284,50 @@ export default function AnalysisCenterPage() {
             <p className="font-sans text-muted-foreground">{uploadedFile?.name}{jobTitle && <> · targeting <span className="text-primary font-medium">{jobTitle}</span></>}</p>
           </motion.div>
 
-          {/* Overall score ring + summary */}
-          <motion.div variants={fadeUp} className="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8">
-            <ScoreRing score={scores.overall_fit} />
-            <div className="flex-1">
-              <h3 className="font-serif text-xl font-medium text-foreground mb-1">
-                {scores.overall_fit >= 75 ? 'Strong match — you\'re in great shape' :
-                 scores.overall_fit >= 50 ? 'Good score — room to improve' :
-                 scores.overall_fit >= 30 ? 'Needs work — but we\'ve got a plan' :
-                 'Significant gaps — let\'s fix them together'}
-              </h3>
-              <p className="font-sans text-sm text-muted-foreground">
-                {scores.overall_fit >= 50
-                  ? 'Your resume is ATS-compatible. Check the detailed analysis below for specific improvements.'
-                  : 'Your resume needs some attention. The detailed analysis below will show you exactly where to focus.'}
-              </p>
-            </div>
-          </motion.div>
+          {/* Overall score ring + summary (only when scores available) */}
+          {scores && (
+            <motion.div variants={fadeUp} className="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8">
+              <ScoreRing score={scores.overall_fit} />
+              <div className="flex-1">
+                <h3 className="font-serif text-xl font-medium text-foreground mb-1">
+                  {scores.overall_fit >= 75 ? 'Strong match — you\'re in great shape' :
+                   scores.overall_fit >= 50 ? 'Good score — room to improve' :
+                   scores.overall_fit >= 30 ? 'Needs work — but we\'ve got a plan' :
+                   'Significant gaps — let\'s fix them together'}
+                </h3>
+                <p className="font-sans text-sm text-muted-foreground">
+                  {scores.overall_fit >= 50
+                    ? 'Your resume is ATS-compatible. Check the detailed analysis below for specific improvements.'
+                    : 'Your resume needs some attention. The detailed analysis below will show you exactly where to focus.'}
+                </p>
+              </div>
+            </motion.div>
+          )}
 
-          {/* Score cards grid */}
-          <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {scoreConfig.map((cfg) => {
-              const Icon = cfg.icon
-              const value = scores[cfg.key]
-              return (
-                <div key={cfg.key} className="glass-card rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-sans text-xs text-muted-foreground uppercase tracking-wider">{cfg.label}</span>
-                    <Icon className="w-4 h-4 text-muted-foreground" />
+          {/* Score cards grid (only when scores available) */}
+          {scores && (
+            <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {scoreConfig.map((cfg) => {
+                const Icon = cfg.icon
+                const value = scores[cfg.key]
+                return (
+                  <div key={cfg.key} className="glass-card rounded-2xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-sans text-xs text-muted-foreground uppercase tracking-wider">{cfg.label}</span>
+                      <Icon className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className={`font-serif text-3xl font-semibold ${getScoreColor(value)} mb-2`}>
+                      {value}<span className="text-sm text-muted-foreground">{cfg.suffix}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 1, delay: 0.3 }}
+                        className={`h-full rounded-full ${getScoreBarColor(value)}`} />
+                    </div>
                   </div>
-                  <div className={`font-serif text-3xl font-semibold ${getScoreColor(value)} mb-2`}>
-                    {value}<span className="text-sm text-muted-foreground">{cfg.suffix}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 1, delay: 0.3 }}
-                      className={`h-full rounded-full ${getScoreBarColor(value)}`} />
-                  </div>
-                </div>
-              )
-            })}
-          </motion.div>
+                )
+              })}
+            </motion.div>
+          )}
 
           {/* Detailed analysis from backend */}
           {analysisText && (
