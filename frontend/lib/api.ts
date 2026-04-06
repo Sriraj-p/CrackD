@@ -7,7 +7,8 @@
 
 import { createClient } from '@/lib/supabase/client'
 
-const API_BASE = process.env.NEXT_PUBLIC_CRACKD_API_URL || ''
+// Strip trailing slashes to prevent double-slash URLs (e.g. "https://host//api/session")
+const API_BASE = (process.env.NEXT_PUBLIC_CRACKD_API_URL || '').replace(/\/+$/, '')
 
 // ─── Auth headers ───
 
