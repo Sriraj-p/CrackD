@@ -7,8 +7,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
+from typing import Any
 
 from openai import OpenAI
 from anthropic import Anthropic
@@ -23,6 +25,7 @@ class LLMResponse:
     model: str
     provider: str
     usage: dict = field(default_factory=dict)
+    parsed: dict | None = None
 
 
 # ─── OpenAI client ───────────────────────────────────────
@@ -59,6 +62,46 @@ class OpenAIClient:
                 "prompt_tokens": response.usage.prompt_tokens,
                 "completion_tokens": response.usage.completion_tokens,
             },
+        )
+
+    def chat_json(
+        self,
+        messages: list[dict],
+        json_schema: dict[str, Any],
+        *,
+        temperature: float = 0.7,
+        max_tokens: int = 4000,
+    ) -> LLMResponse:
+        """Chat completion with OpenAI structured output (response_format).
+
+        `json_schema` is the value for response_format.json_schema.schema.
+        The response is guaranteed to conform to the schema.
+        """
+        response = self._client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "analysis_result",
+                    "strict": True,
+                    "schema": json_schema,
+                },
+            },
+        )
+        choice = response.choices[0]
+        parsed = json.loads(choice.message.content)
+        return LLMResponse(
+            content=choice.message.content,
+            model=response.model,
+            provider=self.provider,
+            usage={
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+            },
+            parsed=parsed,
         )
 
     def ping(self) -> bool:

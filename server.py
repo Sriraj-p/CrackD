@@ -3,9 +3,7 @@
 # ─────────────────────────────────────────────────────────
 
 import os
-import re
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, Request, Response
@@ -75,88 +73,58 @@ class ChatResponse(BaseModel):
     highlights: list[dict] | None = None
 
 
-def extract_scores(text: str) -> dict | None:
-    """Extract all score markers from the analysis text via regex."""
-    # Primary scores
-    primary_patterns = {
-        "overall_fit": r"OVERALL_FIT:\s*(\d+)",
-        "hr_score": r"HR_SCORE:\s*(\d+)",
-        "ats_score": r"ATS_SCORE:\s*(\d+)",
-        "knowledge_score": r"KNOWLEDGE_SCORE:\s*(\d+)",
-    }
-    # Sub-scores for the breakdown bars
-    sub_patterns = {
-        "keyword_match": r"KEYWORD_MATCH:\s*(\d+)",
-        "formatting": r"FORMATTING:\s*(\d+)",
-        "impact_statements": r"IMPACT_STATEMENTS:\s*(\d+)",
-        "section_completeness": r"SECTION_COMPLETENESS:\s*(\d+)",
-    }
-    scores = {}
-    for key, pattern in {**primary_patterns, **sub_patterns}.items():
-        match = re.search(pattern, text)
-        if match:
-            scores[key] = min(100, max(0, int(match.group(1))))
+# ─── Structured output schema for analysis ──────────────
 
-    # Need at least the 4 primary scores
-    if all(k in scores for k in primary_patterns):
-        return scores
-    return None
-
-
-def extract_highlights(text: str) -> list[dict] | None:
-    """Extract the 4 highlight cards from HIGHLIGHT: markers."""
-    pattern = r"HIGHLIGHT:\s*(\w+)\s*\|\s*([^|]+?)\s*\|\s*(.+)"
-    matches = re.findall(pattern, text)
-    if len(matches) >= 4:
-        return [
-            {"icon": m[0].strip(), "title": m[1].strip(), "description": m[2].strip()}
-            for m in matches[:4]
-        ]
-    return None
-
-
-def extract_scores_via_llm(analysis_text: str) -> dict | None:
-    """Fallback: ask the LLM to extract scores from an analysis that's missing markers."""
-    try:
-        openai_client = get_client("openai")
-        resp = openai_client.chat(
-            messages=[
-                {"role": "system", "content": (
-                    "Extract numerical scores (0-100) from the resume analysis below. "
-                    "Reply with ONLY these lines, nothing else:\n"
-                    "OVERALL_FIT: <number>\nHR_SCORE: <number>\n"
-                    "ATS_SCORE: <number>\nKNOWLEDGE_SCORE: <number>\n"
-                    "KEYWORD_MATCH: <number>\nFORMATTING: <number>\n"
-                    "IMPACT_STATEMENTS: <number>\nSECTION_COMPLETENESS: <number>"
-                )},
-                {"role": "user", "content": analysis_text[:3000]},
+ANALYSIS_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "analysis": {
+            "type": "string",
+            "description": "Full markdown analysis text for display.",
+        },
+        "scores": {
+            "type": "object",
+            "properties": {
+                "overall_fit": {"type": "integer"},
+                "hr_score": {"type": "integer"},
+                "ats_score": {"type": "integer"},
+                "knowledge_score": {"type": "integer"},
+                "keyword_match": {"type": "integer"},
+                "formatting": {"type": "integer"},
+                "impact_statements": {"type": "integer"},
+                "section_completeness": {"type": "integer"},
+            },
+            "required": [
+                "overall_fit", "hr_score", "ats_score", "knowledge_score",
+                "keyword_match", "formatting", "impact_statements", "section_completeness",
             ],
-            temperature=0,
-            max_tokens=200,
-        )
-        return extract_scores(resp.content)
-    except Exception as e:
-        print(f"[SCORES] LLM fallback failed: {e}")
-        return None
+            "additionalProperties": False,
+        },
+        "highlights": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "icon": {
+                        "type": "string",
+                        "enum": ["check", "trending", "alert", "search"],
+                    },
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+                "required": ["icon", "title", "description"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["analysis", "scores", "highlights"],
+    "additionalProperties": False,
+}
 
 
-# All score/highlight markers that should be stripped from the displayed analysis text
-_SCORE_MARKERS = [
-    "OVERALL_FIT:", "HR_SCORE:", "ATS_SCORE:", "KNOWLEDGE_SCORE:",
-    "KEYWORD_MATCH:", "FORMATTING:", "IMPACT_STATEMENTS:", "SECTION_COMPLETENESS:",
-]
-
-
-def clean_response(text: str) -> str:
-    clean = text
-    for marker in _SCORE_MARKERS:
-        clean = re.sub(rf"{marker}\s*\d+\n?", "", clean)
-    # Remove HIGHLIGHT lines
-    clean = re.sub(r"HIGHLIGHT:\s*\w+\s*\|[^\n]*\n?", "", clean)
-    # Remove leftover markdown headers for the markers section
-    clean = re.sub(r"###\s*Scores\s*\n?", "", clean)
-    clean = re.sub(r"###\s*Highlight Cards\s*\n?", "", clean)
-    return clean.strip()
+def _clamp_scores(scores: dict) -> dict:
+    """Clamp all score values to 0-100."""
+    return {k: min(100, max(0, v)) for k, v in scores.items()}
 
 
 def detect_mode(message: str, session_data: dict) -> str:
@@ -230,31 +198,70 @@ Confident, direct, supportive. Like a sharp friend who works in recruiting.
     return ROOT_PROMPT
 
 
+def _build_messages(session_data: dict, message: str, mode: str) -> list[dict]:
+    """Build the message list for an LLM call."""
+    system_prompt = build_system_prompt(mode, session_data)
+    messages = [{"role": "system", "content": system_prompt}]
+    for h in session_data.get("history", [])[-20:]:
+        messages.append(h)
+    messages.append({"role": "user", "content": message})
+    return messages
+
+
+def run_analysis(session_data: dict, message: str) -> dict:
+    """Run resume analysis using OpenAI structured output.
+
+    Returns dict with keys: analysis (str), scores (dict), highlights (list[dict]).
+    """
+    messages = _build_messages(session_data, message, "analysis")
+    llm = get_client("openai")
+
+    try:
+        resp = llm.chat_json(
+            messages=messages,
+            json_schema=ANALYSIS_JSON_SCHEMA,
+            temperature=0.7,
+            max_tokens=4000,
+        )
+        result = resp.parsed
+
+        history = session_data.get("history", [])
+        history.append({"role": "user", "content": message})
+        history.append({"role": "assistant", "content": result["analysis"]})
+        session_data["history"] = history
+
+        return {
+            "analysis": result["analysis"],
+            "scores": _clamp_scores(result["scores"]),
+            "highlights": result["highlights"][:4],
+        }
+    except Exception as e:
+        print(f"[ANALYSIS] Structured output failed: {e}")
+        return {
+            "analysis": f"I encountered an issue processing your request. Please try again. Error: {str(e)}",
+            "scores": None,
+            "highlights": None,
+        }
+
+
 def run_completion(session_data: dict, message: str) -> str:
+    """Run a non-analysis chat completion (interview, career, root)."""
     mode = detect_mode(message, session_data)
 
     if mode in ("career", "interview"):
         session_data["mode"] = mode
 
-    system_prompt = build_system_prompt(mode, session_data)
-
-    messages = [{"role": "system", "content": system_prompt}]
-
-    history = session_data.get("history", [])
-    for h in history[-20:]:
-        messages.append(h)
-
-    messages.append({"role": "user", "content": message})
+    messages = _build_messages(session_data, message, mode)
 
     # Route to the right provider — for now everything stays on OpenAI.
-    # Phase 1 just proves the plumbing works; later tickets will flip
-    # interview + career to Anthropic.
+    # Later tickets will flip interview + career to Anthropic.
     llm = get_client("openai")
 
     try:
         resp = llm.chat(messages=messages, temperature=0.7, max_tokens=4000)
         assistant_reply = resp.content
 
+        history = session_data.get("history", [])
         history.append({"role": "user", "content": message})
         history.append({"role": "assistant", "content": assistant_reply})
         session_data["history"] = history
@@ -298,12 +305,10 @@ async def chat(req: ChatRequest, current_user: User = Depends(require_auth)):
         raise HTTPException(status_code=403, detail="Not your session.")
 
     response_text = run_completion(session_data, req.message)
-    scores = extract_scores(response_text)
 
     return ChatResponse(
-        response=clean_response(response_text),
+        response=response_text,
         session_id=req.session_id,
-        scores=scores,
     )
 
 
@@ -346,18 +351,11 @@ async def upload_resume(
     message = f"Here is my resume:\n\n{resume_content}\n\n{job_description}"
 
     session_data["mode"] = "analysis"
-    response_text = run_completion(session_data, message)
-    scores = extract_scores(response_text)
-    highlights = extract_highlights(response_text)
-
-    # Fallback: if the LLM didn't include score markers, ask it to score separately
-    if scores is None:
-        print("[SCORES] Markers not found in response — trying LLM fallback")
-        scores = extract_scores_via_llm(response_text)
+    result = run_analysis(session_data, message)
 
     session_data["has_analysis"] = True
     session_data["mode"] = None
-    session_data["analysis_summary"] = response_text[:3000]
+    session_data["analysis_summary"] = result["analysis"][:3000]
 
     try:
         store_analysis(
@@ -366,7 +364,7 @@ async def upload_resume(
             resume_text=resume_content,
             job_description=job_description,
             job_url="",
-            hr_analysis=response_text[:2000],
+            hr_analysis=result["analysis"][:2000],
             ats_analysis="",
             knowledge_gaps="",
             suggestions="",
@@ -375,10 +373,10 @@ async def upload_resume(
         print(f"DB storage warning: {e}")
 
     return ChatResponse(
-        response=clean_response(response_text),
+        response=result["analysis"],
         session_id=session_id,
-        scores=scores,
-        highlights=highlights,
+        scores=result["scores"],
+        highlights=result["highlights"],
     )
 
 
