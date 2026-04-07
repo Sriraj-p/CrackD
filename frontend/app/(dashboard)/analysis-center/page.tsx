@@ -209,26 +209,26 @@ export default function AnalysisCenterPage() {
         <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Left — Motivational text */}
           <motion.div variants={fadeUp} className="lg:col-span-5 lg:sticky lg:top-8">
-            <div className="mb-8">
-              <span className="inline-block glass-card px-4 py-1.5 rounded-full text-xs font-sans text-primary uppercase tracking-widest mb-4">Step 1 — Resume Upload</span>
-              <h1 className="font-serif text-4xl md:text-5xl font-medium text-foreground text-balance mb-4">
-                Your resume is your <span className="italic text-primary">first impression.</span>
+            <div className="mb-4">
+              <span className="inline-block glass-card px-3 py-1 rounded-full text-[10px] font-sans text-primary uppercase tracking-widest mb-3">Step 1 — Resume Upload</span>
+              <h1 className="font-serif text-2xl md:text-3xl font-light tracking-tight text-foreground text-balance mb-2" style={{ fontFamily: "'Playfair Display', 'Georgia', serif" }}>
+                Your resume is your <span className="italic text-primary font-normal">first impression.</span>
               </h1>
-              <p className="font-sans text-muted-foreground text-lg leading-relaxed text-pretty">
+              <p className="font-sans text-muted-foreground text-sm leading-relaxed text-pretty">
                 Upload your CV and our AI agents will parse every detail, score it against ATS systems, and give you a clear roadmap to stand out.
               </p>
             </div>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2.5">
               {[
                 { icon: Sparkles, stat: '94%', label: 'of users improved their ATS score in one session' },
                 { icon: Target, stat: '2.3x', label: 'faster than manual resume optimization' },
                 { icon: Award, stat: '78%', label: 'interview callback rate after CrackD analysis' },
               ].map(({ icon: Icon, stat, label }) => (
-                <div key={label} className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5"><Icon className="w-5 h-5 text-primary" /></div>
+                <div key={label} className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5"><Icon className="w-4 h-4 text-primary" /></div>
                   <div>
-                    <span className="font-serif text-2xl font-semibold text-primary">{stat}</span>
-                    <p className="font-sans text-xs text-muted-foreground mt-0.5">{label}</p>
+                    <span className="font-serif text-lg font-semibold text-primary">{stat}</span>
+                    <p className="font-sans text-[11px] text-muted-foreground mt-0">{label}</p>
                   </div>
                 </div>
               ))}
@@ -398,27 +398,17 @@ export default function AnalysisCenterPage() {
             <motion.div key="breakdown" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
               className="grid lg:grid-cols-12 gap-4 items-start">
 
-              {/* LEFT — Resume Breakdown */}
-              <div className="lg:col-span-3 flex flex-col gap-3">
-                {(sections['resume breakdown'] || sections['job requirements']) && (
+              {/* LEFT — Resume Breakdown (scrollable) */}
+              <div className="lg:col-span-4 flex flex-col gap-3 max-h-[72vh] overflow-y-auto pr-1 scrollbar-thin">
+                {sections['resume breakdown'] && (
                   <div className="glass-card rounded-xl p-4">
-                    {sections['resume breakdown'] && (
-                      <div className={sections['job requirements'] ? 'mb-3' : ''}>
-                        <h3 className="font-serif text-sm font-semibold text-foreground mb-1.5">Resume Breakdown</h3>
-                        <div className="font-sans text-xs [&_p]:text-xs [&_li]:text-xs [&_strong]:text-xs"><Markdown>{sections['resume breakdown']}</Markdown></div>
-                      </div>
-                    )}
-                    {sections['job requirements'] && (
-                      <div>
-                        <h3 className="font-serif text-sm font-semibold text-foreground mb-1.5">Job Requirements</h3>
-                        <div className="font-sans text-xs [&_p]:text-xs [&_li]:text-xs [&_strong]:text-xs"><Markdown>{sections['job requirements']}</Markdown></div>
-                      </div>
-                    )}
+                    <h3 className="font-serif text-sm font-semibold text-foreground mb-1.5">Resume Breakdown</h3>
+                    <div className="font-sans text-xs [&_p]:text-xs [&_li]:text-xs [&_strong]:text-xs"><Markdown>{sections['resume breakdown']}</Markdown></div>
                   </div>
                 )}
               </div>
 
-              {/* MIDDLE — Score Breakdown + Highlight Cards */}
+              {/* MIDDLE — Score Breakdown + Highlight Cards + Job Requirements */}
               <div className="lg:col-span-4 flex flex-col gap-3">
                 {scores && (
                   <div className="glass-card rounded-xl p-4">
@@ -460,10 +450,17 @@ export default function AnalysisCenterPage() {
                     })}
                   </div>
                 )}
+
+                {sections['job requirements'] && (
+                  <div className="glass-card rounded-xl p-4">
+                    <h3 className="font-serif text-sm font-semibold text-foreground mb-1.5">Job Requirements</h3>
+                    <div className="font-sans text-xs [&_p]:text-xs [&_li]:text-xs [&_strong]:text-xs"><Markdown>{sections['job requirements']}</Markdown></div>
+                  </div>
+                )}
               </div>
 
               {/* RIGHT — Overall Assessment */}
-              <div className="lg:col-span-5 flex flex-col gap-3">
+              <div className="lg:col-span-4 flex flex-col gap-3">
                 {sections['overall assessment'] && (
                   <div className="glass-card rounded-xl p-4">
                     <h3 className="font-serif text-sm font-semibold text-foreground mb-2">Overall Assessment</h3>
