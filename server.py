@@ -8,9 +8,10 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -35,6 +36,25 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    """Set cache headers so browsers always fetch fresh HTML but cache hashed assets."""
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        path = request.url.path
+        if "/_next/static/" in path:
+            # Content-hashed files — safe to cache forever
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif path.startswith("/api/"):
+            pass  # Don't touch API responses
+        else:
+            # HTML and other assets — always revalidate
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
+
+app.add_middleware(CacheControlMiddleware)
 
 # Mount auth routes
 app.include_router(auth_router)
