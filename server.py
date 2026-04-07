@@ -217,11 +217,14 @@ def run_analysis(session_data: dict, message: str) -> dict:
     llm = get_client("openai")
 
     try:
+        # Analysis needs higher token limit: the full markdown (Resume Breakdown,
+        # HR Analysis, ATS, Knowledge Gaps, Overall Assessment) is wrapped inside
+        # a JSON object alongside scores and highlights. 4000 truncates.
         resp = llm.chat_json(
             messages=messages,
             json_schema=ANALYSIS_JSON_SCHEMA,
             temperature=0.7,
-            max_tokens=4000,
+            max_tokens=10000,
         )
         result = resp.parsed
 
