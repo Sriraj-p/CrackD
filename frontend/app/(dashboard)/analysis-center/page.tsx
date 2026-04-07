@@ -513,8 +513,8 @@ export default function AnalysisCenterPage() {
             </motion.div>
           )}
 
-          {/* Fallback: if sections didn't parse, show full analysis */}
-          {analysisText && !sections['overall assessment'] && !sections['hr analysis'] && (
+          {/* Fallback: only if NO recognized sections parsed at all */}
+          {analysisText && Object.keys(sections).length === 0 && (
             <motion.div variants={fadeUp} className="glass-card rounded-xl p-4">
               <h3 className="font-sans text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Detailed Analysis</h3>
               <div className="font-sans text-xs"><Markdown>{analysisText}</Markdown></div>
