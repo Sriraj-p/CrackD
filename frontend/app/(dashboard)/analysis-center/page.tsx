@@ -1,40 +1,55 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Upload, CheckCircle2, AlertTriangle, TrendingUp, Loader2, X,
   Briefcase, Link as LinkIcon, Shield, Zap, Lock, Lightbulb, Award, Target, Sparkles,
-  FileCheck, AlertCircle,
+  FileCheck, AlertCircle, Search, Users, Bot, Brain,
 } from 'lucide-react'
 import { useSession } from '@/contexts/session-context'
-import { uploadResume, type AnalysisScores } from '@/lib/api'
+import { uploadResume, type AnalysisScores, type HighlightCard } from '@/lib/api'
 import { Markdown } from '@/components/ui/markdown'
 
 type UploadState = 'idle' | 'dragging' | 'uploaded' | 'analyzing' | 'done' | 'error'
 
-// Score config matching the backend's four score dimensions
-const scoreConfig = [
-  { key: 'overall_fit' as const, label: 'Overall Fit', icon: Target, suffix: '%' },
-  { key: 'experience_relevance' as const, label: 'Experience Relevance', icon: TrendingUp, suffix: '/100' },
-  { key: 'resume_quality' as const, label: 'Resume Quality', icon: FileCheck, suffix: '/100' },
-  { key: 'growth_potential' as const, label: 'Growth Potential', icon: Zap, suffix: '/100' },
-]
-
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } } }
 const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } } }
 
-function ScoreRing({ score }: { score: number }) {
-  const r = 54, c = 2 * Math.PI * r
+// Breakdown bar config for the score breakdown section
+const breakdownConfig = [
+  { key: 'keyword_match' as const, label: 'Keyword Match' },
+  { key: 'formatting' as const, label: 'Formatting' },
+  { key: 'impact_statements' as const, label: 'Impact Statements' },
+  { key: 'section_completeness' as const, label: 'Section Completeness' },
+]
+
+// Map highlight icon names to Lucide components
+const highlightIcons = {
+  check: CheckCircle2,
+  trending: TrendingUp,
+  alert: AlertTriangle,
+  search: Search,
+}
+
+function ScoreRing({ score, size = 'lg' }: { score: number; size?: 'lg' | 'sm' }) {
+  const r = size === 'lg' ? 54 : 38
+  const c = 2 * Math.PI * r
+  const viewBox = size === 'lg' ? '0 0 128 128' : '0 0 96 96'
+  const cx = size === 'lg' ? 64 : 48
+  const strokeW = size === 'lg' ? 8 : 6
+  const wrapClass = size === 'lg' ? 'w-36 h-36' : 'w-24 h-24'
+  const textClass = size === 'lg' ? 'font-serif text-4xl font-bold text-primary' : 'font-serif text-2xl font-bold text-primary'
+  const labelClass = size === 'lg' ? 'text-[10px] text-muted-foreground font-sans' : 'text-[8px] text-muted-foreground font-sans'
   return (
-    <div className="relative w-36 h-36">
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 128 128">
-        <circle cx="64" cy="64" r={r} fill="none" stroke="var(--secondary)" strokeWidth="8" />
-        <circle cx="64" cy="64" r={r} fill="none" stroke="var(--primary)" strokeWidth="8" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c - (score / 100) * c} className="transition-all duration-1000 ease-out" />
+    <div className={`relative ${wrapClass}`}>
+      <svg className="w-full h-full -rotate-90" viewBox={viewBox}>
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--secondary)" strokeWidth={strokeW} />
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--primary)" strokeWidth={strokeW} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c - (score / 100) * c} className="transition-all duration-1000 ease-out" />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-serif text-4xl font-bold text-primary">{score}</span>
-        <span className="text-[10px] text-muted-foreground font-sans">Overall Fit</span>
+        <span className={textClass}>{score}</span>
+        <span className={labelClass}>Overall Fit</span>
       </div>
     </div>
   )
@@ -54,8 +69,52 @@ function getScoreBarColor(value: number): string {
   return 'bg-red-400'
 }
 
+// Split the analysis markdown into named sections by ## headers
+function splitAnalysisSections(text: string): Record<string, string> {
+  const sections: Record<string, string> = {}
+  const parts = text.split(/^## /m)
+  for (const part of parts) {
+    if (!part.trim()) continue
+    const newlineIdx = part.indexOf('\n')
+    if (newlineIdx === -1) continue
+    const header = part.substring(0, newlineIdx).trim().toLowerCase()
+    const content = part.substring(newlineIdx + 1).trim()
+    sections[header] = content
+  }
+  return sections
+}
+
+// Detailed analysis card with score ring for HR/ATS/Knowledge
+function AnalysisCard({ title, icon: Icon, score, benchmark, children }: {
+  title: string
+  icon: React.ElementType
+  score: number
+  benchmark: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="glass-card rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5">
+          <Icon className="w-4 h-4 text-primary" />
+          <h3 className="font-serif text-sm font-medium text-foreground">{title}</h3>
+        </div>
+        <div className={`font-serif text-xl font-semibold ${getScoreColor(score)}`}>
+          {score}<span className="text-xs text-muted-foreground">/100</span>
+        </div>
+      </div>
+      <div className="h-1 rounded-full bg-secondary overflow-hidden mb-2">
+        <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 1, delay: 0.3 }}
+          className={`h-full rounded-full ${getScoreBarColor(score)}`} />
+      </div>
+      <p className="text-[10px] text-muted-foreground mb-2 italic">{benchmark}</p>
+      <div className="font-sans text-xs [&_p]:text-xs [&_li]:text-xs [&_strong]:text-xs">{children}</div>
+    </div>
+  )
+}
+
 export default function AnalysisCenterPage() {
-  const { sessionId, sessionReady, setAnalysisResult, setAnalysisScores } = useSession()
+  const { sessionId, sessionReady, setAnalysisResult, setAnalysisScores, setAnalysisHighlights } = useSession()
   const [uploadState, setUploadState] = useState<UploadState>('idle')
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [jobTitle, setJobTitle] = useState('')
@@ -64,8 +123,13 @@ export default function AnalysisCenterPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   // Real results from backend
   const [scores, setScores] = useState<AnalysisScores | null>(null)
+  const [highlights, setHighlights] = useState<HighlightCard[] | null>(null)
   const [analysisText, setAnalysisText] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'breakdown' | 'hr' | 'ats' | 'knowledge'>('breakdown')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Split analysis text into sections for the two-column layout
+  const sections = useMemo(() => analysisText ? splitAnalysisSections(analysisText) : {}, [analysisText])
 
   const formatSize = (bytes: number) =>
     bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -106,13 +170,15 @@ export default function AnalysisCenterPage() {
       return
     }
 
-    // Store scores and analysis text (scores may be null if LLM didn't return them)
+    // Store scores, highlights, and analysis text
     setScores(result.scores ?? null)
+    setHighlights(result.highlights ?? null)
     setAnalysisText(result.analysis)
 
     // Share with session context so mock interview and career chat can reference it
     setAnalysisResult(result.analysis)
     setAnalysisScores(result.scores ?? null)
+    setAnalysisHighlights(result.highlights ?? null)
 
     setUploadState('done')
     setShowResults(true)
@@ -129,10 +195,12 @@ export default function AnalysisCenterPage() {
     setUploadState('idle')
     setUploadedFile(null)
     setScores(null)
+    setHighlights(null)
     setAnalysisText(null)
     setErrorMessage(null)
     setJobTitle('')
     setJobUrl('')
+    setActiveTab('breakdown')
   }
 
   return (
@@ -277,25 +345,30 @@ export default function AnalysisCenterPage() {
       )}
 
       {showResults && (
-        <motion.div variants={stagger} initial="hidden" animate="visible" className="flex flex-col gap-6">
-          {/* Header */}
-          <motion.div variants={fadeUp}>
-            <h1 className="font-serif text-3xl font-medium text-foreground mb-2">Analysis Results</h1>
-            <p className="font-sans text-muted-foreground">{uploadedFile?.name}{jobTitle && <> · targeting <span className="text-primary font-medium">{jobTitle}</span></>}</p>
+        <motion.div variants={stagger} initial="hidden" animate="visible" className="flex flex-col gap-4">
+          {/* Header row — compact */}
+          <motion.div variants={fadeUp} className="flex items-center justify-between">
+            <div>
+              <h1 className="font-serif text-2xl font-medium text-foreground mb-0.5">Analysis Results</h1>
+              <p className="font-sans text-xs text-muted-foreground">{uploadedFile?.name}{jobTitle && <> · targeting <span className="text-primary font-medium">{jobTitle}</span></>}</p>
+            </div>
+            <button onClick={reset} className="btn-pill glass-card text-foreground text-xs border border-border hover:scale-105 active:scale-95 flex items-center gap-1.5 px-3 py-1.5">
+              <Upload className="w-3.5 h-3.5" /> New Analysis
+            </button>
           </motion.div>
 
-          {/* Overall score ring + summary (only when scores available) */}
+          {/* Overall score banner — compact */}
           {scores && (
-            <motion.div variants={fadeUp} className="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8">
-              <ScoreRing score={scores.overall_fit} />
+            <motion.div variants={fadeUp} className="glass-card rounded-xl p-4 flex flex-col md:flex-row items-center gap-5">
+              <ScoreRing score={scores.overall_fit} size="sm" />
               <div className="flex-1">
-                <h3 className="font-serif text-xl font-medium text-foreground mb-1">
+                <h3 className="font-serif text-base font-medium text-foreground mb-0.5">
                   {scores.overall_fit >= 75 ? 'Strong match — you\'re in great shape' :
                    scores.overall_fit >= 50 ? 'Good score — room to improve' :
                    scores.overall_fit >= 30 ? 'Needs work — but we\'ve got a plan' :
                    'Significant gaps — let\'s fix them together'}
                 </h3>
-                <p className="font-sans text-sm text-muted-foreground">
+                <p className="font-sans text-xs text-muted-foreground">
                   {scores.overall_fit >= 50
                     ? 'Your resume is ATS-compatible. Check the detailed analysis below for specific improvements.'
                     : 'Your resume needs some attention. The detailed analysis below will show you exactly where to focus.'}
@@ -304,47 +377,152 @@ export default function AnalysisCenterPage() {
             </motion.div>
           )}
 
-          {/* Score cards grid (only when scores available) */}
-          {scores && (
-            <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {scoreConfig.map((cfg) => {
-                const Icon = cfg.icon
-                const value = scores[cfg.key]
-                return (
-                  <div key={cfg.key} className="glass-card rounded-2xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-sans text-xs text-muted-foreground uppercase tracking-wider">{cfg.label}</span>
-                      <Icon className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <div className={`font-serif text-3xl font-semibold ${getScoreColor(value)} mb-2`}>
-                      {value}<span className="text-sm text-muted-foreground">{cfg.suffix}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 1, delay: 0.3 }}
-                        className={`h-full rounded-full ${getScoreBarColor(value)}`} />
+          {/* ═══ Tab navigation ═══ */}
+          <motion.div variants={fadeUp} className="flex gap-2 flex-wrap">
+            {([
+              { key: 'breakdown', label: 'Analysis & Breakdown', icon: FileCheck },
+              { key: 'hr', label: 'HR Analysis', icon: Users },
+              { key: 'ats', label: 'ATS Compatibility', icon: Bot },
+              { key: 'knowledge', label: 'Knowledge & Competency Gaps', icon: Brain },
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => setActiveTab(key)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-sans font-medium transition-all duration-200 ${activeTab === key ? 'bg-primary text-primary-foreground shadow-sm' : 'glass-card text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
+          </motion.div>
+
+          {/* ═══ Tab: Analysis & Breakdown — 3-column layout ═══ */}
+          {activeTab === 'breakdown' && (
+            <motion.div key="breakdown" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+              className="grid lg:grid-cols-12 gap-4 items-start">
+
+              {/* LEFT — Resume Breakdown */}
+              <div className="lg:col-span-3 flex flex-col gap-3">
+                {(sections['resume breakdown'] || sections['job requirements']) && (
+                  <div className="glass-card rounded-xl p-4">
+                    {sections['resume breakdown'] && (
+                      <div className={sections['job requirements'] ? 'mb-3' : ''}>
+                        <h3 className="font-serif text-sm font-semibold text-foreground mb-1.5">Resume Breakdown</h3>
+                        <div className="font-sans text-xs [&_p]:text-xs [&_li]:text-xs [&_strong]:text-xs"><Markdown>{sections['resume breakdown']}</Markdown></div>
+                      </div>
+                    )}
+                    {sections['job requirements'] && (
+                      <div>
+                        <h3 className="font-serif text-sm font-semibold text-foreground mb-1.5">Job Requirements</h3>
+                        <div className="font-sans text-xs [&_p]:text-xs [&_li]:text-xs [&_strong]:text-xs"><Markdown>{sections['job requirements']}</Markdown></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* MIDDLE — Score Breakdown + Highlight Cards */}
+              <div className="lg:col-span-4 flex flex-col gap-3">
+                {scores && (
+                  <div className="glass-card rounded-xl p-4">
+                    <h3 className="font-sans text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Score Breakdown</h3>
+                    <div className="flex flex-col gap-3">
+                      {breakdownConfig.map((cfg) => {
+                        const value = scores[cfg.key] ?? 0
+                        return (
+                          <div key={cfg.key}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-sans text-xs font-medium text-foreground">{cfg.label}</span>
+                              <span className={`font-serif text-xs font-semibold ${getScoreColor(value)}`}>{value}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                              <motion.div initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 1, delay: 0.2 }}
+                                className={`h-full rounded-full ${getScoreBarColor(value)}`} />
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
-                )
-              })}
-            </motion.div>
-          )}
+                )}
 
-          {/* Detailed analysis from backend */}
-          {analysisText && (
-            <motion.div variants={fadeUp} className="glass-card rounded-2xl p-6">
-              <h3 className="font-sans text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Detailed Analysis</h3>
-              <div className="font-sans">
-                <Markdown>{analysisText}</Markdown>
+                {highlights && highlights.length >= 4 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {highlights.map((h, i) => {
+                      const Icon = highlightIcons[h.icon] || CheckCircle2
+                      const isStrength = h.icon === 'check' || h.icon === 'trending'
+                      return (
+                        <div key={i} className="glass-card rounded-lg p-3">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Icon className={`w-3 h-3 ${isStrength ? 'text-primary' : 'text-amber-500'}`} />
+                            <span className="font-sans text-[10px] font-semibold text-foreground leading-tight">{h.title}</span>
+                          </div>
+                          <p className="font-sans text-[10px] text-muted-foreground leading-relaxed">{h.description}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT — Overall Assessment */}
+              <div className="lg:col-span-5 flex flex-col gap-3">
+                {sections['overall assessment'] && (
+                  <div className="glass-card rounded-xl p-4">
+                    <h3 className="font-serif text-sm font-semibold text-foreground mb-2">Overall Assessment</h3>
+                    <div className="font-sans text-xs [&_p]:text-xs [&_li]:text-xs [&_strong]:text-xs"><Markdown>{sections['overall assessment']}</Markdown></div>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
 
-          {/* Action buttons */}
-          <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-3">
-            <button onClick={reset} className="btn-pill glass-card text-foreground text-sm border border-border hover:scale-105 active:scale-95 flex items-center gap-2">
-              <Upload className="w-4 h-4" /> Analyze Another Resume
-            </button>
-          </motion.div>
+          {/* ═══ Tab: HR Analysis ═══ */}
+          {activeTab === 'hr' && scores && sections['hr analysis'] && (
+            <motion.div key="hr" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+              <AnalysisCard
+                title="HR Analysis"
+                icon={Users}
+                score={scores.hr_score}
+                benchmark="Successful candidates for this role typically score 65-80 in HR screening."
+              >
+                <Markdown>{sections['hr analysis']}</Markdown>
+              </AnalysisCard>
+            </motion.div>
+          )}
+
+          {/* ═══ Tab: ATS Compatibility ═══ */}
+          {activeTab === 'ats' && scores && sections['ats compatibility'] && (
+            <motion.div key="ats" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+              <AnalysisCard
+                title="ATS Compatibility"
+                icon={Bot}
+                score={scores.ats_score}
+                benchmark="Resumes that pass ATS screening for this role typically score 70-85."
+              >
+                <Markdown>{sections['ats compatibility']}</Markdown>
+              </AnalysisCard>
+            </motion.div>
+          )}
+
+          {/* ═══ Tab: Knowledge & Competency Gaps ═══ */}
+          {activeTab === 'knowledge' && scores && sections['knowledge & competency gaps'] && (
+            <motion.div key="knowledge" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+              <AnalysisCard
+                title="Knowledge & Competency Gaps"
+                icon={Brain}
+                score={scores.knowledge_score}
+                benchmark="Successful candidates typically cover 75-85% of required competencies."
+              >
+                <Markdown>{sections['knowledge & competency gaps']}</Markdown>
+              </AnalysisCard>
+            </motion.div>
+          )}
+
+          {/* Fallback: if sections didn't parse, show full analysis */}
+          {analysisText && !sections['overall assessment'] && !sections['hr analysis'] && (
+            <motion.div variants={fadeUp} className="glass-card rounded-xl p-4">
+              <h3 className="font-sans text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Detailed Analysis</h3>
+              <div className="font-sans text-xs"><Markdown>{analysisText}</Markdown></div>
+            </motion.div>
+          )}
         </motion.div>
       )}
     </motion.div>

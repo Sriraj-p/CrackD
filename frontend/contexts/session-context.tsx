@@ -9,7 +9,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { createSession as apiCreateSession, type AnalysisScores } from '@/lib/api'
+import { createSession as apiCreateSession, type AnalysisScores, type HighlightCard } from '@/lib/api'
 
 interface SessionContextType {
   sessionId: string | null
@@ -18,8 +18,10 @@ interface SessionContextType {
   // Analysis results shared across pages (so interview/career chat can reference them)
   analysisResult: string | null
   analysisScores: AnalysisScores | null
+  analysisHighlights: HighlightCard[] | null
   setAnalysisResult: (result: string | null) => void
   setAnalysisScores: (scores: AnalysisScores | null) => void
+  setAnalysisHighlights: (highlights: HighlightCard[] | null) => void
   // Reset everything (new analysis)
   resetSession: () => Promise<void>
 }
@@ -32,6 +34,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [sessionError, setSessionError] = useState<string | null>(null)
   const [analysisResult, setAnalysisResult] = useState<string | null>(null)
   const [analysisScores, setAnalysisScores] = useState<AnalysisScores | null>(null)
+  const [analysisHighlights, setAnalysisHighlights] = useState<HighlightCard[] | null>(null)
 
   const initSession = useCallback(async () => {
     setSessionError(null)
@@ -70,6 +73,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setSessionReady(false)
         setAnalysisResult(null)
         setAnalysisScores(null)
+        setAnalysisHighlights(null)
       }
     })
     return () => subscription.unsubscribe()
@@ -78,6 +82,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const resetSession = useCallback(async () => {
     setAnalysisResult(null)
     setAnalysisScores(null)
+    setAnalysisHighlights(null)
     setSessionId(null)
     setSessionReady(false)
     await initSession()
@@ -90,8 +95,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionError,
       analysisResult,
       analysisScores,
+      analysisHighlights,
       setAnalysisResult,
       setAnalysisScores,
+      setAnalysisHighlights,
       resetSession,
     }}>
       {children}

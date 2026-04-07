@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { SessionProvider, useSession } from '@/contexts/session-context'
 import {
   Zap, BarChart3, MessageSquare, MessagesSquare, LogOut,
-  Sun, Moon, ChevronLeft, ChevronRight, User, AlertTriangle, WifiOff,
+  Sun, Moon, ChevronsLeft, ChevronsRight, User, AlertTriangle, WifiOff,
 } from 'lucide-react'
 
 const navItems = [
@@ -42,8 +42,19 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
-  const [collapsed, setCollapsed] = useState(false)
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebar-collapsed') === 'true'
+    }
+    return false
+  })
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme')
+      if (saved === 'light' || saved === 'dark') return saved
+    }
+    return 'dark'
+  })
   const [user, setUser] = useState<{ email?: string; name?: string } | null>(null)
   const [showWarning, setShowWarning] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
@@ -88,7 +99,12 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     const root = document.documentElement
     if (theme === 'dark') root.classList.add('dark')
     else root.classList.remove('dark')
+    localStorage.setItem('theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', String(collapsed))
+  }, [collapsed])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -157,10 +173,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             {!collapsed && <span>Sign out</span>}
           </button>
 
-          <button onClick={() => setCollapsed((c) => !c)} className="flex items-center justify-center w-full py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all duration-200 mt-1">
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
         </div>
+
+        {/* Protruding collapse/expand toggle on sidebar edge */}
+        <button onClick={() => setCollapsed((c) => !c)}
+          className="absolute top-1/2 -translate-y-1/2 -right-3 z-30 w-6 h-12 rounded-r-lg bg-secondary/80 border border-l-0 border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200 backdrop-blur-sm shadow-sm">
+          {collapsed ? <ChevronsRight className="w-3.5 h-3.5" /> : <ChevronsLeft className="w-3.5 h-3.5" />}
+        </button>
       </motion.aside>
 
       {/* Main content */}
