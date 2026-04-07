@@ -4,6 +4,7 @@ starlette==0.46.2
 python-multipart
 pymupdf
 openai
+anthropic
 python-dotenv
 PyJWT[crypto]
 sqlalchemy
