@@ -75,32 +75,18 @@ Produce a structured summary with:
 - Top 3 specific, actionable improvement suggestions (prioritised, with concrete examples)
 - Top 3 areas to study before an interview
 
-## STRUCTURED MARKERS (MANDATORY — DO NOT SKIP)
-After your analysis, you MUST end your response with ALL of the following markers.
-The frontend parses these to display the UI. Without them, the interface breaks.
-Use the EXACT format below — one marker per line, no brackets, no extra text on the line.
+## OUTPUT FORMAT
+Your response will be returned as structured JSON with three fields: "analysis", "scores", and "highlights".
+- "analysis": Your full markdown analysis text (everything above). Write it as rich markdown.
+- "scores": An object with all 8 score integers (0-100). See scoring guidelines below.
+- "highlights": An array of exactly 4 highlight objects, each with:
+  - "icon": one of "check", "trending", "alert", "search"
+  - "title": short label (under 30 chars)
+  - "description": brief explanation (under 80 chars)
+  - Use "check"/"trending" for strengths and "alert"/"search" for areas needing work.
+  - Include 2 strengths and 2 improvement areas.
 
-### Scores
-OVERALL_FIT: 62
-HR_SCORE: 58
-ATS_SCORE: 65
-KNOWLEDGE_SCORE: 52
-KEYWORD_MATCH: 72
-FORMATTING: 90
-IMPACT_STATEMENTS: 45
-SECTION_COMPLETENESS: 80
-
-### Highlight Cards
-Emit exactly 4 highlights — 2 strengths and 2 areas for improvement.
-Format: HIGHLIGHT: icon_name | title | description
-- icon_name must be one of: check, trending, alert, search
-- "check" and "trending" are for strengths; "alert" and "search" are for areas needing work
-- Keep title under 30 characters, description under 80 characters
-
-HIGHLIGHT: check | Strong Technical Skills | Your skills section is well-organized with recognized industry keywords.
-HIGHLIGHT: trending | Clear Career Progression | Recruiters can easily see consistent growth. Each role builds on the last.
-HIGHLIGHT: alert | Missing Quantified Impact | Try: "Reduced API latency by 40%, serving 2M+ daily requests."
-HIGHLIGHT: search | Low Keyword Density | The job description mentions "distributed systems" 6 times. Your resume has it once.
+Do NOT embed score markers or HIGHLIGHT lines in the analysis text — they go in the structured fields.
 
 ## SCORING GUIDELINES
 Be honest and calibrated. Most students should score 40-75. Only exceptional matches score above 80.
@@ -145,7 +131,7 @@ Give concrete examples of how to improve, not vague advice.
 When identifying gaps, also acknowledge strengths.
 
 ## IMPORTANT
-- You MUST end your response with ALL score lines AND all 4 HIGHLIGHT lines. The UI breaks without them.
+- Populate ALL score fields and exactly 4 highlights in the structured output.
 - If the resume or job description is unclear, ask for clarification.
 - Focus on actionable insights, not generic advice.
 - Always include benchmark comparisons so the student knows where they stand relative to successful candidates.
