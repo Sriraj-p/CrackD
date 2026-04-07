@@ -14,7 +14,6 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from openai import OpenAI
 from sqlalchemy.orm import Session
 
 load_dotenv()
@@ -26,6 +25,7 @@ from backend.core.auth import require_auth
 from backend.models.user import User
 from backend.routes.auth import router as auth_router
 from backend.services.analysis import store_analysis
+from backend.core.llm import get_client, check_providers
 
 app = FastAPI()
 
@@ -58,9 +58,6 @@ app.add_middleware(CacheControlMiddleware)
 
 # Mount auth routes
 app.include_router(auth_router)
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 # In-memory session store
 sessions = {}
@@ -121,8 +118,8 @@ def extract_highlights(text: str) -> list[dict] | None:
 def extract_scores_via_llm(analysis_text: str) -> dict | None:
     """Fallback: ask the LLM to extract scores from an analysis that's missing markers."""
     try:
-        response = client.chat.completions.create(
-            model=MODEL,
+        openai_client = get_client("openai")
+        resp = openai_client.chat(
             messages=[
                 {"role": "system", "content": (
                     "Extract numerical scores (0-100) from the resume analysis below. "
@@ -137,7 +134,7 @@ def extract_scores_via_llm(analysis_text: str) -> dict | None:
             temperature=0,
             max_tokens=200,
         )
-        return extract_scores(response.choices[0].message.content)
+        return extract_scores(resp.content)
     except Exception as e:
         print(f"[SCORES] LLM fallback failed: {e}")
         return None
@@ -249,14 +246,14 @@ def run_completion(session_data: dict, message: str) -> str:
 
     messages.append({"role": "user", "content": message})
 
+    # Route to the right provider — for now everything stays on OpenAI.
+    # Phase 1 just proves the plumbing works; later tickets will flip
+    # interview + career to Anthropic.
+    llm = get_client("openai")
+
     try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=messages,
-            temperature=0.7,
-            max_tokens=4000,
-        )
-        assistant_reply = response.choices[0].message.content
+        resp = llm.chat(messages=messages, temperature=0.7, max_tokens=4000)
+        assistant_reply = resp.content
 
         history.append({"role": "user", "content": message})
         history.append({"role": "assistant", "content": assistant_reply})
@@ -388,7 +385,12 @@ async def upload_resume(
 # ─── Health check ───
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok"}
+    providers = check_providers()
+    all_ok = all(providers.values())
+    return {
+        "status": "ok" if all_ok else "degraded",
+        "providers": providers,
+    }
 
 
 # ─── Startup: log registered routes ───
